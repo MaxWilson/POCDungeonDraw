@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32901.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "App", "src\App.fsproj", "{79B9F4F8-7BB4-45BD-80CC-1F82E39FBA9F}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Api", "api\Api.fsproj", "{9B630CDB-068E-4548-8935-0DFE30D95305}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Paket", "Paket", "{68BCF44A-E447-49AD-8992-39A0791BC5B5}"
+	ProjectSection(SolutionItems) = preProject
+		paket.dependencies = paket.dependencies
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{79B9F4F8-7BB4-45BD-80CC-1F82E39FBA9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79B9F4F8-7BB4-45BD-80CC-1F82E39FBA9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79B9F4F8-7BB4-45BD-80CC-1F82E39FBA9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79B9F4F8-7BB4-45BD-80CC-1F82E39FBA9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B630CDB-068E-4548-8935-0DFE30D95305}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B630CDB-068E-4548-8935-0DFE30D95305}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B630CDB-068E-4548-8935-0DFE30D95305}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B630CDB-068E-4548-8935-0DFE30D95305}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {69726BCA-A84D-4EAD-8754-DAB758E19C6B}
+	EndGlobalSection
+EndGlobal
