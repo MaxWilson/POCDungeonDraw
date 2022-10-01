@@ -54,6 +54,7 @@ module GetMessage =
                     "Hello, "
                     + name
                     + "! This HTTP triggered function executed successfully."
+                    + System.Guid.NewGuid().ToString()
 
             return OkObjectResult(responseMessage) :> IActionResult
         }

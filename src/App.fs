@@ -5,6 +5,8 @@ open Fetch
 open Thoth.Fetch
 open Feliz
 
+type 't Deferred = NotStarted | InProgress | Ready of 't
+
 [<ReactComponent>]
 let Counter () =
     let (count, setCount) = React.useState (0)
@@ -13,28 +15,32 @@ let Counter () =
                Html.button [ prop.text "Increment"
                              prop.onClick (fun _ -> setCount (count + 1)) ] ]
 
+
+
 [<ReactComponent>]
 let Message () =
-    let (message, setMessage) = React.useState ("")
+    let (message, setMessage) = React.useState (NotStarted)
 
     Html.div [ Html.button [ prop.text "Get a message from the API"
                              prop.onClick
                                  (fun _ ->
                                      promise {
+                                         setMessage InProgress
                                          let! message =
                                              Fetch.get (
                                                  "/api/GetMessage?name=FSharpie",
                                                  headers = [ HttpRequestHeaders.Accept "application/json" ]
                                              )
 
-                                         setMessage message
+                                         setMessage (message |> Ready)
                                          return ()
                                      }
                                      |> ignore) ]
-               if message = "" then
-                   Html.none
-               else
-                   Html.p message ]
+               match message with
+                | NotStarted -> Html.none
+                | InProgress -> Html.div "Executing..."
+                | Ready (msg:string) -> Html.p msg
+                   ]
 
 [<ReactComponent>]
 let App () = React.fragment [ Counter(); Message() ]
