@@ -23,7 +23,7 @@ let Message () =
                                      promise {
                                          let! message =
                                              Fetch.get (
-                                                 "/api/GetMessage?name=FSharp",
+                                                 "/api/GetMessage?name=FSharpie",
                                                  headers = [ HttpRequestHeaders.Accept "application/json" ]
                                              )
 

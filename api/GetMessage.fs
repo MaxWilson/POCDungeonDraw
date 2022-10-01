@@ -53,7 +53,7 @@ module GetMessage =
                 else
                     "Hello, "
                     + name
-                    + ". This HTTP triggered function executed successfully."
+                    + "! This HTTP triggered function executed successfully."
 
             return OkObjectResult(responseMessage) :> IActionResult
         }
