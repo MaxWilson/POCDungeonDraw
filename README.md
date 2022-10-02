@@ -1,6 +1,6 @@
 # POCDungeonDraw
 
-Public URL: https://wonderful-mud-00aeae01e.2.azurestaticapps.net/
+Public URL: https://dungeondraw.shiningsword.org/ or https://wonderful-mud-00aeae01e.2.azurestaticapps.net/
 
 Proof of concept for dungeon generator (for Shining Sword). Design-time drawing and gametime exploration, WebRTC support.
 
