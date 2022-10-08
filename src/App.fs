@@ -85,7 +85,7 @@ let sketchpad dispatch =
             } |> Promise.start
         sketch.create [
             sketch.ref canvas
-            sketch.style [style.border "1em dashed purple"]
+            sketch.style [style.border "0.06em dashed purple"]
             sketch.height 400; sketch.width 600; sketch.strokeWidth 4; sketch.strokeColor "blue"
             //sketch.onChange (fun path -> System.Console.WriteLine path)
             sketch.onStroke (fun path -> System.Console.WriteLine path)
