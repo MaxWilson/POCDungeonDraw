@@ -22,12 +22,13 @@ module SketchCanvas =
         let inline mkSketchAttr (key: string) (value: obj) : ISketchProperty = unbox (key, value)
     [<Erase>]
     type sketch =
-        static member create (props: ISketchProperty list) = Interop.reactApi.createElement(import "ReactSketchCanvas" "react-sketch-canvas", createObj !!props)
-        static member width (v:int) = mkSketchAttr "width" v
-        static member height (v: int) = mkSketchAttr "height" v
-        static member strokeWidth (v: int) = mkSketchAttr "strokeWidth" v
-        static member strokeColor (v: string) = mkSketchAttr "strokeColor" v
-        static member style (props: IStyleAttribute list) : ISketchProperty = !!Interop.mkAttr "style" (createObj !!props)
+        static member inline create (props: ISketchProperty list) = Interop.reactApi.createElement(import "ReactSketchCanvas" "react-sketch-canvas", createObj !!props)
+        static member inline width (v:int) = mkSketchAttr "width" v
+        static member inline height (v: int) = mkSketchAttr "height" v
+        static member inline strokeWidth (v: int) = mkSketchAttr "strokeWidth" v
+        static member inline strokeColor (v: string) = mkSketchAttr "strokeColor" v
+        static member inline style (props: IStyleAttribute list) : ISketchProperty = !!Interop.mkAttr "style" (createObj !!props)
+        static member inline ref (ref: IRefValue<#Browser.Types.HTMLElement option>): ISketchProperty = !!Interop.mkAttr "ref" ref
     [<Erase>]
     type style =
         static member inline border (v:string) = Interop.mkStyle "border" v
@@ -66,12 +67,33 @@ let Message () =
             ]
 open SketchCanvas
 [<ReactComponent>]
-let App () =
-    React.fragment [
+let sketchpad dispatch =
+    let canvas = React.useRef(None)
+    let html, htmlUpdate = React.useState "Press the Export SVG button"
+    Html.div [
         sketch.create [
+            sketch.ref canvas
             sketch.style [style.border "1em dashed purple"]
             sketch.height 400; sketch.width 600; sketch.strokeWidth 4; sketch.strokeColor "blue"
             ]
+        Html.div [
+            let exportSvg _ =
+                promise {
+                    match canvas.current with
+                    | Some canvas ->
+                        let! (svg: string) = canvas?exportSvg()
+                        htmlUpdate svg
+                    | None -> ()
+                } |> Promise.start
+            Html.button [prop.text "Export SVG"; prop.onClick(exportSvg)]
+            Html.textarea [prop.value html; prop.readOnly true]
+            ]
+        ]
+
+[<ReactComponent>]
+let App () =
+    React.fragment [
+        sketchpad()
         Counter()
         Message() ]
 
