@@ -24,3 +24,6 @@ Then navigate to http://localhost:4280 to use the app. Both fable and swa suppor
 
 See https://github.com/aaronpowell/swa-feliz-template for more build and deployment instructions.
 
+# Whitespace errors
+
+If you see superfluous ^Ms in git diff, do git config core.whitespace cr-at-eol
