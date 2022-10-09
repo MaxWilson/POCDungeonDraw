@@ -1,3 +1,0 @@
-group Api
-    FSharp.Core
-    Microsoft.NET.Sdk.Functions

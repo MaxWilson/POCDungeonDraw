@@ -19,6 +19,18 @@ module GetMessage =
     [<Literal>]
     let Name = "name"
 
+    [<FunctionName("psst")>]
+    let psst ([<HttpTrigger(AuthorizationLevel.Function, "get")>] req: HttpRequest) (log: ILogger) =
+        async {
+            let secretClient = new SecretClient(
+                new Uri("https://identitytest.vault.azure.net"),
+                new DefaultAzureCredential());
+        var secret = await secretClient.GetSecretAsync("<SecretName>");
+            return "Yo dude? I'm still here."
+        }
+        |> Async.StartAsTask
+
+
     [<FunctionName("GetMessage")>]
     let run
         ([<HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)>] req: HttpRequest)
