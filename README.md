@@ -5,7 +5,6 @@ Public URL: https://dungeondraw.shiningsword.org/ or https://wonderful-mud-00aea
 Proof of concept for dungeon generator (for Shining Sword). Design-time drawing and gametime exploration, WebRTC support.
 
     dotnet tool restore
-    dotnet paket install
     npm install
     npm install -g @azure/static-web-apps-cli azure-functions-core-tools@3
 
