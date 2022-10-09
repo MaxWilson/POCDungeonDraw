@@ -2,6 +2,7 @@ group Client
     framework: netstandard2.0
     source https://api.nuget.org/v3/index.json
 
+nuget Fable.Elmish.React
 nuget Feliz
     nuget FSharp.Core
     nuget Fable.Browser.Dom
