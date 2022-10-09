@@ -12,6 +12,7 @@ open Microsoft.Extensions.Logging
 module GetMessage =
     open Azure.Security.KeyVault.Secrets
     open Azure.Identity
+    open Microsoft.Azure.WebJobs.Extensions.Http
 
     // Define a nullable container to deserialize into.
     [<AllowNullLiteral>]
@@ -22,14 +23,45 @@ module GetMessage =
     [<Literal>]
     let Name = "name"
 
+    type TestData = { tag: string }
+
     [<FunctionName("psst")>]
-    let psst ([<HttpTrigger(AuthorizationLevel.Function, "get")>] req: HttpRequest) (log: ILogger) =
+    let Psst ([<HttpTrigger(AuthorizationLevel.Function, "get")>] req: HttpRequest) (log: ILogger)
+        =
         task {
             let secretClient = new SecretClient(
                 new Uri("https://shiningsword.vault.azure.net"),
                 new DefaultAzureCredential())
             let! secret = secretClient.GetSecretAsync("Test123")
             return ("Yo dude? I'm still here." + secret.Value.Value)
+        }
+
+    [<FunctionName("ReadData")>]
+    let ReadData ([<HttpTrigger(AuthorizationLevel.Function, "get", Route = "ReadData/{id}")>] req: HttpRequest) (log: ILogger)
+        ([<CosmosDB(
+            databaseName = "ToDoList",
+            collectionName = "Items",
+            ConnectionStringSetting = "CosmosDbConnectionString",
+            SqlQuery ="SELECT * FROM c WHERE c.id={id} ORDER BY c._ts")>] productItem: TestData seq)
+        =
+        task {
+            return (productItem |> Array.ofSeq)
+        }
+
+    [<FunctionName("WriteData")>]
+    let WriteData ([<HttpTrigger(AuthorizationLevel.Function, "post")>] req: HttpRequest) (log: ILogger)
+        ([<CosmosDB(
+            databaseName = "ToDoList",
+            collectionName = "Items",
+            ConnectionStringSetting = "CosmosDbConnectionString")>] output: IAsyncCollector<TestData> )
+        =
+        task {
+            let! requestBody = ((new StreamReader(req.Body)).ReadToEndAsync());
+            log.LogInformation $"About to deserialize '{requestBody}'"
+            let data = JsonConvert.DeserializeObject<TestData>(requestBody);
+            log.LogInformation $"Got tag = '{data.tag}'"
+            log.LogInformation $"Writing {id} to CosmosDB"
+            do! output.AddAsync(data)
         }
 
 
