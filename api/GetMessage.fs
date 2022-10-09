@@ -10,6 +10,9 @@ open Newtonsoft.Json
 open Microsoft.Extensions.Logging
 
 module GetMessage =
+    open Azure.Security.KeyVault.Secrets
+    open Azure.Identity
+
     // Define a nullable container to deserialize into.
     [<AllowNullLiteral>]
     type NameContainer() =
@@ -21,14 +24,13 @@ module GetMessage =
 
     [<FunctionName("psst")>]
     let psst ([<HttpTrigger(AuthorizationLevel.Function, "get")>] req: HttpRequest) (log: ILogger) =
-        async {
+        task {
             let secretClient = new SecretClient(
-                new Uri("https://identitytest.vault.azure.net"),
-                new DefaultAzureCredential());
-        var secret = await secretClient.GetSecretAsync("<SecretName>");
-            return "Yo dude? I'm still here."
+                new Uri("https://shiningsword.vault.azure.net"),
+                new DefaultAzureCredential())
+            let! secret = secretClient.GetSecretAsync("Test123")
+            return ("Yo dude? I'm still here." + secret.Value.Value)
         }
-        |> Async.StartAsTask
 
 
     [<FunctionName("GetMessage")>]
