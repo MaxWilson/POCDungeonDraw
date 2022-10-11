@@ -6,7 +6,7 @@ Proof of concept for dungeon generator (for Shining Sword). Design-time drawing 
 
     dotnet tool restore
     npm install
-    npm install -g @azure/static-web-apps-cli azure-functions-core-tools@3
+    npm install -g @azure/static-web-apps-cli azure-functions-core-tools@4
 
 To On three separate command lines, start Fable, the az function, and swa emulator which ties them both together.
     start npm start && start swa start http://localhost:3000 --api-location http://localhost:7071 && cd api && start func start --csharp
