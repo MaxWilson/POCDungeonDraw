@@ -6,6 +6,7 @@
     "serve": "vite serve"
   },
   "devDependencies": {
+    "ably": "^1.2.30",
     "vite": "^2.9.15"
   },
   "name": "swa-fable-starter",
