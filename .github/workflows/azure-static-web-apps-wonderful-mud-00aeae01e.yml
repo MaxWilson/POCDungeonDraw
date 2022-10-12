@@ -23,7 +23,7 @@ jobs:
           dotnet-version: '6.x'
       - uses: actions/setup-node@v1
         with:
-          node-version: 14
+          node-version: 16
       - run: |
           dotnet tool restore
           dotnet paket install
