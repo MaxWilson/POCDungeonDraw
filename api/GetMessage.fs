@@ -86,12 +86,15 @@ module GetMessage =
                 JsonConvert.DeserializeObject<NameContainer>(reqBody)
 
             let name =
-                match nameOpt with
-                | Some n -> n
-                | None ->
-                    match data with
-                    | null -> ""
-                    | nc -> nc.Name
+                match req with
+                | Auth.Identity ident -> ident.UserDetails
+                | _ ->
+                    match nameOpt with
+                    | Some n -> n
+                    | None ->
+                        match data with
+                        | null -> ""
+                        | nc -> nc.Name
 
             let responseMessage =
                 if (String.IsNullOrWhiteSpace(name)) then
