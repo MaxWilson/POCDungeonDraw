@@ -7,16 +7,17 @@
     <None Remove="C:\Users\maxw\.nuget\packages\fsharp.core\5.0.2\contentFiles\any\netstandard2.0\FSharp.Core.xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common.fs" />
     <None Include="Binding.Ably.fs" />
     <Compile Include="Components.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <PackageReference Include="Fable.Browser.Dom" Version="2.10.1" />
     <PackageReference Include="Fable.Core" Version="3.7.1" />
     <PackageReference Include="Fable.Elmish.React" Version="3.0.1" />
     <PackageReference Include="Feliz" Version="1.68.0" />
+    <PackageReference Include="Feliz.Router" Version="3.8.0" />
     <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
   </ItemGroup>
 </Project>
