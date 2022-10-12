@@ -23,7 +23,7 @@ module GetMessage =
     [<Literal>]
     let Name = "name"
 
-    type TestData = { tag: string }
+    type TestData = { id: string; tag: string; owner: string; payload: string list }
 
     [<FunctionName("psst")>]
     let Psst ([<HttpTrigger(AuthorizationLevel.Function, "get")>] req: HttpRequest) (log: ILogger)
@@ -42,11 +42,14 @@ module GetMessage =
             databaseName = "ToDoList",
             collectionName = "Items",
             ConnectionStringSetting = "CosmosDbConnectionString",
-            SqlQuery ="SELECT * FROM c WHERE c.id={id} ORDER BY c._ts")>] productItem: TestData seq)
+            SqlQuery ="SELECT * FROM c WHERE c.tag={id} ORDER BY c._ts")>] data: TestData seq)
         =
-        task {
-            return (productItem |> Array.ofSeq)
-        }
+        match req with
+        | Auth.Identity ident ->
+            task {
+                return (data |> Seq.filter (fun d -> d.owner = ident.UserDetails) |> Array.ofSeq)
+            }
+        | _ -> task { return Array.empty }
 
     [<FunctionName("WriteData")>]
     let WriteData ([<HttpTrigger(AuthorizationLevel.Function, "post")>] req: HttpRequest) (log: ILogger)
@@ -56,12 +59,16 @@ module GetMessage =
             ConnectionStringSetting = "CosmosDbConnectionString")>] output: IAsyncCollector<TestData> )
         =
         task {
-            let! requestBody = ((new StreamReader(req.Body)).ReadToEndAsync());
-            log.LogInformation $"About to deserialize '{requestBody}'"
-            let data = JsonConvert.DeserializeObject<TestData>(requestBody);
-            log.LogInformation $"Got tag = '{data.tag}'"
-            log.LogInformation $"Writing {id} to CosmosDB"
-            do! output.AddAsync(data)
+            match req with
+            | Auth.Identity ident ->
+                let! requestBody = ((new StreamReader(req.Body)).ReadToEndAsync());
+                log.LogInformation $"About to deserialize '{requestBody}'"
+                let data = JsonConvert.DeserializeObject<TestData>(requestBody);
+                let data = { data with owner = ident.UserDetails; id = $"{ident.UserDetails}/{data.tag}" }
+                log.LogInformation $"Got tag = '{data.id}'"
+                log.LogInformation $"Writing {data.id} to CosmosDB"
+                do! output.AddAsync(data)
+            | _ -> failwith "You must log in first in order to save"
         }
 
 

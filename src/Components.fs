@@ -97,3 +97,22 @@ let Message (tag:string) =
                 | InProgress -> Html.div "Executing..."
                 | Ready (msg:string) -> Html.p msg
             ]
+
+[<ReactComponent>]
+let SaveButton saveCmd =
+    let fileName, update = React.useState None
+    Html.div [
+        match fileName with
+        | None ->
+            Html.button [
+                prop.text "Save"
+                prop.onClick (thunk1 update (Some ""))
+                ]
+        | Some fileName ->
+            Html.span [
+                let invalid = fileName |> System.String.IsNullOrWhiteSpace
+                Html.input [prop.placeholder "E.g. myStuff1"; prop.valueOrDefault fileName]
+                Html.button [prop.disabled invalid; prop.text "OK"; if not invalid then prop.onClick (thunk saveCmd)]
+                Html.button [prop.disabled invalid; prop.text "Cancel"; prop.onClick (thunk1 update None)]
+                ]
+        ]

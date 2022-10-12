@@ -11,9 +11,9 @@ open Elmish
 type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
-type Model = { tag: string; currentUser: Identity Deferred }
-type Msg = SetTag of string | ReceiveIdentity of Identity Deferred
-let init _ = { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted }, []
+type Model = { tag: string; currentUser: Identity Deferred; currentParty: string }
+type Msg = UpdateParty of string | ReceiveIdentity of Identity Deferred
+let init _ = { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = "" }, []
 
 let navigateTo (url: string) =
     Browser.Dom.window.location.assign url
@@ -32,7 +32,7 @@ let loginButton dispatch =
 
 let update msg model =
     match msg with
-    | SetTag tag -> { model with tag = tag }, []
+    | UpdateParty v -> { model with currentParty = v }, []
     | ReceiveIdentity id -> { model with currentUser = id }, []
 
 let view (model:Model) dispatch =
@@ -44,6 +44,12 @@ let view (model:Model) dispatch =
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
         sketchpad()
         Html.div [
+            Html.textarea [
+                prop.placeholder "enter some text"
+                prop.valueOrDefault model.currentParty
+                prop.onChange (UpdateParty >> dispatch)
+                ]
+            SaveButton (fun _ -> )
             Html.span "Tag:"
             Html.input [prop.placeholder "Enter a tag"; prop.valueOrDefault model.tag; prop.onChange (SetTag >> dispatch)]
             ]
