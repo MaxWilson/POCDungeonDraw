@@ -64,7 +64,7 @@ module GetMessage =
                 let! requestBody = ((new StreamReader(req.Body)).ReadToEndAsync());
                 log.LogInformation $"About to deserialize '{requestBody}'"
                 let data = JsonConvert.DeserializeObject<TestData>(requestBody);
-                let data = { data with owner = ident.UserDetails; id = $"{ident.UserDetails}/{data.tag}" }
+                let data = { data with owner = ident.UserDetails; id = $"{ident.UserDetails}-{data.tag}" }
                 log.LogInformation $"Got tag = '{data.id}'"
                 log.LogInformation $"Writing {data.id} to CosmosDB"
                 do! output.AddAsync(data)

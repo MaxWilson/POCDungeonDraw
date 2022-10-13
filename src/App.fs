@@ -3,6 +3,7 @@ module App
 open Browser.Dom
 
 open Feliz
+open Feliz.Router
 open Fable.Core.JsInterop
 
 open Components
@@ -12,7 +13,13 @@ type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
 type Model = { tag: string; currentUser: Identity Deferred; currentParty: string }
-type Msg = UpdateParty of string | ReceiveIdentity of Identity Deferred
+type Msg =
+    | SetTag of string
+    | UpdateParty of string
+    | ReceiveIdentity of Identity Deferred
+
+type TestData = { tag: string; payload: string list }
+
 let init _ = { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = "" }, []
 
 let navigateTo (url: string) =
@@ -34,6 +41,7 @@ let update msg model =
     match msg with
     | UpdateParty v -> { model with currentParty = v }, []
     | ReceiveIdentity id -> { model with currentUser = id }, []
+    | SetTag v -> { model with tag = v }, Cmd.navigate v
 
 let view (model:Model) dispatch =
     Html.div [
@@ -49,7 +57,11 @@ let view (model:Model) dispatch =
                 prop.valueOrDefault model.currentParty
                 prop.onChange (UpdateParty >> dispatch)
                 ]
-            SaveButton (fun _ -> )
+            SaveButton (fun fileName -> Promise.start <| promise {
+                let data : TestData = { tag = fileName; payload = [ model.currentParty ] }
+                do! Thoth.Fetch.Fetch.post($"/api/WriteData", data)
+                SetTag fileName |> dispatch
+                })
             Html.span "Tag:"
             Html.input [prop.placeholder "Enter a tag"; prop.valueOrDefault model.tag; prop.onChange (SetTag >> dispatch)]
             ]

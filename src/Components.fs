@@ -111,8 +111,9 @@ let SaveButton saveCmd =
         | Some fileName ->
             Html.span [
                 let invalid = fileName |> System.String.IsNullOrWhiteSpace
-                Html.input [prop.placeholder "E.g. myStuff1"; prop.valueOrDefault fileName]
-                Html.button [prop.disabled invalid; prop.text "OK"; if not invalid then prop.onClick (thunk saveCmd)]
+                Html.input [prop.placeholder "E.g. myStuff1"; prop.valueOrDefault fileName; prop.onChange (Some >> update)]
+                Html.text $"You typed: '{fileName}'"
+                Html.button [prop.disabled invalid; prop.text "OK"; if not invalid then prop.onClick (fun _ -> saveCmd fileName; update None)]
                 Html.button [prop.disabled invalid; prop.text "Cancel"; prop.onClick (thunk1 update None)]
                 ]
         ]

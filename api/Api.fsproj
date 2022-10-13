@@ -16,7 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Auth.fs" />
-    <Compile Include="GetMessage.fs" />
+    <Compile Include="API.fs" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
