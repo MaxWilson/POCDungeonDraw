@@ -8,25 +8,25 @@ open Fable.Core.JsInterop
 
 open Components
 open Elmish
+open Elmish.Navigation
 
 type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
-type Model = { tag: string; currentUser: Identity Deferred; currentParty: string }
+type NavCmd = Load of string | HomeScreen
+type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred }
 type Msg =
     | SetTag of string
-    | UpdateParty of string
+    | ReceiveParty of string Deferred
     | ReceiveIdentity of Identity Deferred
 
 type TestData = { tag: string; payload: string list }
-
-let init _ = { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = "" }, []
 
 let navigateTo (url: string) =
     Browser.Dom.window.location.assign url
 
 [<ReactComponent>]
-let loginButton dispatch =
+let LoginButton dispatch =
     let loggingIn, update = React.useState (thunk false)
     if loggingIn then
         Html.span [
@@ -39,29 +39,70 @@ let loginButton dispatch =
 
 let update msg model =
     match msg with
-    | UpdateParty v -> { model with currentParty = v }, []
+    | ReceiveParty v -> { model with currentParty = v }, []
     | ReceiveIdentity id -> { model with currentUser = id }, []
     | SetTag v -> { model with tag = v }, Cmd.navigate v
 
+let save model dispatch fileName =
+    promise {
+        match model.currentParty with
+        | Ready party ->
+            let data : TestData = { tag = fileName; payload = [ party ] }
+            do! Thoth.Fetch.Fetch.post($"/api/WriteData", data)
+            SetTag fileName |> dispatch
+        | _ -> ()
+        }
+
+let load model dispatch fileName =
+    promise {
+        ReceiveParty (InProgress) |> dispatch
+        let! data = Thoth.Fetch.Fetch.tryFetchAs($"/api/ReadData/{fileName}")
+        match data with
+        | Ok ([{ payload = head::_}: TestData]) ->
+            ReceiveParty (Ready head) |> dispatch
+        | Ok lst ->
+            trace "load.ok no payload" lst |> ignore
+        | Error err ->
+            trace "load.error" err |> ignore
+        }
+
+module Nav =
+    open Elmish.Navigation
+    let parse (loc:Browser.Types.Location) : NavCmd =
+        printfn $"Loc.hash='{loc.hash}'"
+        match loc.hash with
+        | s when s.StartsWith("#") -> s.Substring(1).Replace("/", "") |> Load
+        | _ -> HomeScreen
+        |> trace "parse"
+    let nav (navCmd: NavCmd) model =
+        match navCmd |> trace "nav1" with
+        | HomeScreen -> model, Cmd.Empty
+        | Load tag ->
+            model, Cmd.ofSub (fun dispatch -> load model dispatch tag |> Promise.start)
+        |> trace "nav"
+
+let init (onload:NavCmd) =
+    { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = NotStarted } |> Nav.nav onload
+
 let view (model:Model) dispatch =
+    trace "view" model |> ignore
     Html.div [
         match model.currentUser with
         | NotStarted -> Html.div [prop.text "Initializing identity..."]
         | InProgress -> Html.div [prop.text "Retreiving identity..."]
-        | Ready None -> Html.div [Html.text "Hello, stranger."; loginButton dispatch]
+        | Ready None -> Html.div [Html.text "Hello, stranger."; LoginButton dispatch]
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
         sketchpad()
         Html.div [
             Html.textarea [
                 prop.placeholder "enter some text"
-                prop.valueOrDefault model.currentParty
-                prop.onChange (UpdateParty >> dispatch)
+                match model.currentParty with
+                | Ready party ->
+                    prop.valueOrDefault party
+                | _ -> prop.value ""
+                prop.onChange (Ready >> ReceiveParty >> dispatch)
                 ]
-            SaveButton (fun fileName -> Promise.start <| promise {
-                let data : TestData = { tag = fileName; payload = [ model.currentParty ] }
-                do! Thoth.Fetch.Fetch.post($"/api/WriteData", data)
-                SetTag fileName |> dispatch
-                })
+            SaveButton (save model dispatch >> Promise.start)
             Html.span "Tag:"
             Html.input [prop.placeholder "Enter a tag"; prop.valueOrDefault model.tag; prop.onChange (SetTag >> dispatch)]
             ]
@@ -99,11 +140,12 @@ Program.mkProgram init update view
                     | v -> Erroneous, $"{v.identityProvider}/{v.userDetails}")
                     |> Ready |> ReceiveIdentity
                 | Error err -> ReceiveIdentity (Ready (Some (Erroneous, err.ToString())))
+                |> trace "auth"
                 |> dispatch
-                ()
             }
             |> Promise.start
             )
         )
+    |> Program.toNavigable Nav.parse Nav.nav
     |> Program.withReactBatched "root"
     |> Program.run
