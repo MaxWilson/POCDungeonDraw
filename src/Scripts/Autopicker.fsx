@@ -57,21 +57,26 @@ module POC1 =
             advantages = []
             disadvantages = []
         }
-    type Chooser (priorChoices: string list list) =
+    type Priors = string list list
+    type 't Choice = Priors -> 't
+    type Chooser (priorChoices: Priors) =
         member choose.from (lst: Weapon list) = chooseRandom lst
-        member choose.from (lst: WeaponMasterFocus list) = chooseRandom lst
-        member choose.from (lst: Profession list) = chooseRandom lst
-        member choose.from (lst: Advantage list) = chooseRandom lst
-        member choose.among (lst: Advantage list) = chooseRandomRepeatedly (1 + rand.Next 4) lst
+        member choose.choices (lst: 't list) : 't Choice list = (lst |> List.map (fun item priors -> item))
+        member choose.among (lst: WeaponMasterFocus Choice list) priors = chooseRandom lst priors
+        member choose.from (lst: Profession Choice list) = chooseRandom lst
+        member choose.from (lst: Advantage Choice list) = chooseRandom lst
+        member choose.among (lst: Advantage Choice list) = chooseRandomRepeatedly (1 + rand.Next 4) lst
     let advantageTree (choose: Chooser) =
-        let focii = [
+        let focii =
+            [
             All
             Swords
             TwoWeapon (choose.from Enumerate.Weapons, choose.from Enumerate.Weapons)
             WeaponOfChoice (choose.from Enumerate.Weapons)
             ]
+            |> choose.choices
         [
-            WeaponMaster (choose.from focii) ; DangerSense ; PeripheralVision ; HeroicArcher ; Magery (chooseRandom [3..6])
+            WeaponMaster (choose.among focii) ; DangerSense ; PeripheralVision ; HeroicArcher ; Magery (chooseRandom [3..6])
             ] |> choose.among
     advantageTree
     advantageTree (Chooser(
