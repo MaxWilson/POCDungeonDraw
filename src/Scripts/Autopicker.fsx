@@ -28,6 +28,7 @@ module POC1 =
         static member Professions = [Swashbuckler; MartialArtist; Wizard]
         static member PrimaryAbilities = [ST; DX; IQ; HT]
         static member DerivedAbilities = [HP; FP; Speed; MV]
+        static member Weapons = [Rapier ; Longsword ; Shield ; MainGauche ; Bow]
         static member ToString v =
             match v with
             | HalfOgre -> "Half-ogre"
@@ -56,6 +57,23 @@ module POC1 =
             advantages = []
             disadvantages = []
         }
+    type Chooser() =
+        member choose.from (lst: Weapon list) = chooseRandom lst
+        member choose.from (lst: WeaponMasterFocus list) = chooseRandom lst
+        member choose.from (lst: Profession list) = chooseRandom lst
+        member choose.from (lst: Advantage list) = chooseRandom lst
+    let advantageTree (choose: Chooser) =
+        let focii = [
+            All
+            Swords
+            TwoWeapon (choose.from Enumerate.Weapons, choose.from Enumerate.Weapons)
+            WeaponOfChoice (choose.from Enumerate.Weapons)
+            ]
+        [
+            WeaponMaster (choose.from focii) ; DangerSense ; PeripheralVision ; HeroicArcher ; Magery (chooseRandom [3..6])
+            ] |> choose.from
+    advantageTree
+    advantageTree (Chooser())
 
 type 'Choice MenuItem =
     | Simple of 'Choice list
