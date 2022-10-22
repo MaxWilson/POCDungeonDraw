@@ -5,6 +5,58 @@ module Autopicker
 #I ".."
 #load "Common.fs"
 
+module POC1 =
+    type Weapon = Rapier | Longsword | Shield | MainGauche | Bow
+    type WeaponMasterFocus = All | Swords | TwoWeapon of Weapon * Weapon | WeaponOfChoice of Weapon
+    type Race = Catfolk | Elf | Dwarf | Gnome | HalfOgre | HalfOrc | Halfling
+    type Profession = Swashbuckler | MartialArtist | Wizard
+    type Ability = ST | DX | IQ | HT | Speed | MV | HP | FP
+    type Advantage = WeaponMaster of WeaponMasterFocus | DangerSense | PeripheralVision | HeroicArcher | Magery of int
+    type Severity = Terrible = 6 | Bad = 9 | Average = 12 | Mild = 15
+    type Duty = Companions | Nature | Needy
+    type Disadvantage = BadTemper of Severity | Greed of Severity | SenseOfDuty of Duty
+    type Trait = Race of Race | Profession of Profession | Increase of Ability | Advantage of Advantage | Disadvantage of Disadvantage
+    type Character = {
+        race: Race option
+        profession: Profession
+        abilityMods: Map<Ability, int>
+        advantages: Advantage list
+        disadvantages: Disadvantage list
+        }
+    type Enumerate =
+        static member Races = [Catfolk ; Elf ; Dwarf ; Gnome ; HalfOgre ; HalfOrc ; Halfling]
+        static member Professions = [Swashbuckler; MartialArtist; Wizard]
+        static member PrimaryAbilities = [ST; DX; IQ; HT]
+        static member DerivedAbilities = [HP; FP; Speed; MV]
+        static member ToString v =
+            match v with
+            | HalfOgre -> "Half-ogre"
+            | HalfOrc -> "Half-orc"
+            | v -> v.ToString()
+        static member ToString v =
+            match v with
+            | MartialArtist -> "Martial Artist"
+            | v -> v.ToString()
+    Enumerate.Races |> List.map Enumerate.ToString
+    Enumerate.Professions |> List.map Enumerate.ToString
+    let rand = System.Random()
+    let chooseRandom (lst: _ list) =
+        lst[rand.Next lst.Length]
+    let chooseRandomRepeatedly n (lst: _ list) =
+        [for _ in 1..n -> chooseRandom lst]
+    let sample =
+        let profession = chooseRandom Enumerate.Professions
+        {
+            race = chooseRandom ([None] @ (Enumerate.Races |> List.map Some))
+            profession = profession
+            abilityMods = chooseRandomRepeatedly (rand.Next 8) Enumerate.PrimaryAbilities
+                            @ chooseRandomRepeatedly (rand.Next 8) Enumerate.DerivedAbilities
+                          |> List.countBy id
+                          |> Map.ofList
+            advantages = []
+            disadvantages = []
+        }
+
 type 'Choice MenuItem =
     | Simple of 'Choice list
 type 'Choice Choices = 'Choice MenuItem list
