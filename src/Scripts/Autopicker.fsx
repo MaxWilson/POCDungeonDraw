@@ -59,22 +59,24 @@ module POC1 =
         }
     type Priors = string list list
     type 't Choice = Priors -> ('t list -> 't) -> 't
-    type Chooser (priorChoices: Priors) =
-        member choose.item item = fun priors -> item
+    type Chooser () =
+        member choose.item item : _ Choice = fun priors choiceType -> choiceType [item]
+        member choose.item2 ctor (arg1: _ Choice) (arg2: _ Choice) : _ Choice = fun priors choiceType -> choiceType [ctor(choose.among arg1 priors, choose.among arg2 priors)]
         member choose.from (lst: 't list) : 't Choice = fun priors choiceType -> choiceType lst
-        member choose.among (choices: _ Choice list) = chooseRandom choices
+        member choose.among (choices: _ Choice) priors = choices priors chooseRandom
+    let choose = Chooser()
     let advantageTree (choose: Chooser) =
         let focii =
             [
             All |> choose.item
             Swords |> choose.item
-            TwoWeapon (choose.from Enumerate.Weapons, choose.from Enumerate.Weapons)
+            (TwoWeapon, choose.from Enumerate.Weapons, choose.from Enumerate.Weapons) ||> choose.item2
             WeaponOfChoice (choose.from Enumerate.Weapons)
             ]
             |> choose.choices
         [
             WeaponMaster (choose.among focii) ; DangerSense ; PeripheralVision ; HeroicArcher ; Magery (chooseRandom [3..6])
-            ] |> choose.among
+            ] |> choose.among []
     advantageTree
     advantageTree (Chooser(
         [
