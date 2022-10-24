@@ -94,10 +94,11 @@ module POC1 =
             fun k -> chooseOne Enumerate.Weapons acc (mapCtor WeaponOfChoice >> k)
             fun k ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons acc k
-                chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
-                //let combine ctor choice k =
-                //    choice (function [arg1] -> choice (function [arg2] -> (fun arg2 -> ctor(arg1, arg2))))
-                //combine TwoWeapon chooseWeapon k
+                let combine ctor choice k =
+                    choice (bindChoice (fun arg1 -> choice (mapCtor (fun arg2 -> ctor(arg1, arg2)))) >> k)
+                //let choice = combine TwoWeapon chooseWeapon k
+                let choice2 = chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
+                choice2
             ]
         chooseRandom suboptions k
     sometimes [chooseWeaponMasterFocus] (ChoiceParam.create 25) (mapCtor WeaponMaster)
