@@ -46,7 +46,7 @@ module POC1 =
     let chooseRandomRepeatedly n (lst: _ list) =
         [for _ in 1..n -> chooseRandom lst]
 
-    type CharacterTrait = Level of int | Race of Race | Coord of int * int
+    type CharacterTrait = Level of int | Race of Race | WeaponMaster of WeaponMasterFocus
     let maybe v () = if rand.Next 100 <= 50 then [v] else []
     let chooseSome options =
         [
@@ -70,7 +70,18 @@ module POC1 =
         for r in Enumerate.Races do
             yield (Race r)
         ]
+    let weapon = chooseOne Enumerate.Weapons
+    let focus = chooseSome []
     let choices1 =
+        [levels] @ races
+    sometimes choices1 () id
+
+    let weapon = chooseOne Enumerate.Weapons
+    let singleWeapon = chooseCtor1 WeaponOfChoice weapon
+    let dualWeapon = chooseCtor2 TwoWeapon (chooseDistinct2 weapon weapon)
+    let focus = chooseSome []
+    let weaponMaster = chooseCtor1
+    let choices2 =
         [levels] @ races @ weaponMaster
     sometimes choices1 () id
 
