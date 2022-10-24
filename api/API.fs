@@ -13,6 +13,7 @@ module GetMessage =
     open Azure.Security.KeyVault.Secrets
     open Azure.Identity
     open Microsoft.Azure.WebJobs.Extensions.Http
+    open Microsoft.AspNetCore.Routing
 
     // Define a nullable container to deserialize into.
     [<AllowNullLiteral>]
@@ -44,6 +45,10 @@ module GetMessage =
             ConnectionStringSetting = "CosmosDbConnectionString",
             SqlQuery ="SELECT * FROM c WHERE c.tag={id} ORDER BY c._ts")>] data: TestData seq)
         =
+        let id = match req.HttpContext.GetRouteData().Values.TryGetValue "id" with
+                    | true, v -> v
+                    | _ -> failwith "Id is mandatory"
+        log.LogInformation $"Calling ReadData/{id}"
         match req with
         | Auth.Identity ident ->
             task {
