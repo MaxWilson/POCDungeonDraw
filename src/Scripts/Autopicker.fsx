@@ -95,7 +95,7 @@ module POC1 =
             fun k ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons acc k
                 let combine ctor choice k =
-                    choice (bindChoice (fun arg1 -> choice (mapCtor (fun arg2 -> ctor(arg1, arg2)))) >> k)
+                    choice ((bindChoice (fun arg1 -> choice (mapCtor (fun arg2 -> ctor(arg1, arg2))))) >> k)
                 //let choice = combine TwoWeapon chooseWeapon k
                 let choice2 = chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
                 choice2
