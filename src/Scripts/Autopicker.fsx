@@ -73,11 +73,31 @@ module POC1 =
     let choices1 =
         [levels] @ races
     sometimes choices1 25 id
-    let mkList f = function
-        | [v] -> [f v]
+    let mkList ctor = function
+        | [v] -> [ctor v]
         | _ -> []
+    let mkList2 f = function
+        | [v1], [v2] -> [f(v1, v2)]
+        | _ -> []
+    let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
+    sometimes [chooseWeapon] () id
+    let chooseWeaponMasterFocus acc =
+        let acc = acc + "WeaponMasterFocus"
+        let suboptions = [
+            fun k -> k [All]
+            fun k -> k [Swords]
+            fun k -> chooseOne Enumerate.Weapons acc (mkList WeaponOfChoice >> k)
+            fun k ->
+                let chooseWeapon k = chooseOne Enumerate.Weapons acc k
+                let combine ctor choice k =
+                    choice (mkList (fun arg1 -> choice (mkList (fun arg2 -> ctor(arg1, arg2)))))
+                combine TwoWeapon chooseWeapon k
+            ]
+        chooseRandom suboptions
+    sometimes [chooseWeaponMasterFocus] "" id
+    let chooseWeaponMaster acc k = chooseOne [All; Swords] acc (mkList WeaponMaster >> k)
     let choices2 =
-        choices1 @ [fun acc k -> chooseOne [All; Swords] acc (mkList WeaponMaster)]
+        choices1 @ [fun acc k -> chooseOne [All; Swords] acc (mkList WeaponMaster >> k)]
     sometimes choices2 25 id
 
 
