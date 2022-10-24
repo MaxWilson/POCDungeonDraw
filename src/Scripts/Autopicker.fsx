@@ -73,31 +73,33 @@ module POC1 =
     let choices1 =
         [levels] @ races
     sometimes choices1 25 id
-    let mkList ctor = function // should probably be called mapCtor or something
+    let mapCtor ctor = function // should probably be called mapCtor or something
         | [v] -> [ctor v]
         | _ -> []
-    let bindList f = function // should probably be called bindChoice or something instead
+    let bindChoice f = function // should probably be called bindChoice or something instead
         | [v] -> f v
         | _ -> []
     let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
     sometimes [chooseWeapon] () id
-    let chooseWeaponMasterFocus acc k =
+    let chooseWeaponMasterFocus acc (k: WeaponMasterFocus list -> 'r) =
         let acc = acc + "WeaponMasterFocus"
         let suboptions = [
-            fun k -> [All] |> List.collect k
-            fun k -> [Swords] |> List.collect k
-            fun k -> chooseOne Enumerate.Weapons acc (bindList (WeaponOfChoice >> k))
+            fun k -> [All] |> k
+            fun k -> [Swords] |> k
+            fun k -> chooseOne Enumerate.Weapons acc (mapCtor WeaponOfChoice >> k)
             fun k ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons acc k
-                let combine ctor choice k =
-                    choice (bindList (fun arg1 -> choice (mkList (fun arg2 -> ctor(arg1, arg2)) >> k)))
-                combine TwoWeapon chooseWeapon k
+                let inner arg1 = chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])
+                chooseWeapon ((function [arg1] -> inner arg1 | _ -> []) >> k)
+                //let combine ctor choice k =
+                //    choice (function [arg1] -> choice (function [arg2] -> (fun arg2 -> ctor(arg1, arg2))))
+                //combine TwoWeapon chooseWeapon k
             ]
         chooseRandom suboptions k
-    sometimes [chooseWeaponMasterFocus] "" WeaponMaster
-    let chooseWeaponMaster acc k = chooseWeaponMasterFocus acc (mkList (WeaponMaster >> k))
+    sometimes [chooseWeaponMasterFocus] "" (mapCtor id)
+    let chooseWeaponMaster acc k = chooseWeaponMasterFocus acc (mapCtor (WeaponMaster >> k))
     let choices2 =
-        choices1 @ [fun acc k -> chooseWeaponMasterFocus acc (mkList WeaponMaster)]
+        choices1 @ [fun acc k -> chooseWeaponMasterFocus acc (mapCtor WeaponMaster)]
     sometimes choices2 25 id
 
 
