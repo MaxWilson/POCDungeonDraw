@@ -111,8 +111,8 @@ module POC1 =
     sometimes (choices1@choices1) id (ChoiceParam.create 25)
 
     let choices2 =
-        choices1 @ [maybe (fun k acc -> chooseWeaponMasterFocus (mapCtor (WeaponMaster)) acc)]
-    sometimes choices2 (ChoiceParam.create 50) id
+        choices1 @ [maybe (fun k -> chooseWeaponMasterFocus (mapCtor (WeaponMaster) >> k))]
+    sometimes choices2 id (ChoiceParam.create 50)
 
 
     let weapon = chooseOne Enumerate.Weapons
