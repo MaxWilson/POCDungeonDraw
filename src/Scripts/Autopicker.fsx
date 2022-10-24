@@ -81,21 +81,21 @@ module POC1 =
         | _ -> []
     let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
     sometimes [chooseWeapon] () id
-    let chooseWeaponMasterFocus acc =
+    let chooseWeaponMasterFocus acc k =
         let acc = acc + "WeaponMasterFocus"
         let suboptions = [
-            fun k -> k [All]
-            fun k -> k [Swords]
-            fun k -> chooseOne Enumerate.Weapons acc (mkList WeaponOfChoice >> k)
+            fun k -> [All] |> List.collect k
+            fun k -> [Swords] |> List.collect k
+            fun k -> chooseOne Enumerate.Weapons acc (bindList (WeaponOfChoice >> k))
             fun k ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons acc k
                 let combine ctor choice k =
-                    choice (bindList (fun arg1 -> choice (mkList (fun arg2 -> ctor(arg1, arg2)))) >> k) // something is wrong on this line--why is k restricted to WeaponMasterFocus? We want it to allow WeaponMaster...
+                    choice (bindList (fun arg1 -> choice (mkList (fun arg2 -> ctor(arg1, arg2)) >> k)))
                 combine TwoWeapon chooseWeapon k
             ]
-        chooseRandom suboptions
-    sometimes [chooseWeaponMasterFocus] "" id
-    let chooseWeaponMaster acc k = chooseWeaponMasterFocus acc (mkList WeaponMaster >> k)
+        chooseRandom suboptions k
+    sometimes [chooseWeaponMasterFocus] "" WeaponMaster
+    let chooseWeaponMaster acc k = chooseWeaponMasterFocus acc (mkList (WeaponMaster >> k))
     let choices2 =
         choices1 @ [fun acc k -> chooseWeaponMasterFocus acc (mkList WeaponMaster)]
     sometimes choices2 25 id
