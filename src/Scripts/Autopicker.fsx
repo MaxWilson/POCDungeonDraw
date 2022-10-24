@@ -73,6 +73,13 @@ module POC1 =
     let choices1 =
         [levels] @ races
     sometimes choices1 25 id
+    let mkList f = function
+        | [v] -> [f v]
+        | _ -> []
+    let choices2 =
+        choices1 @ [fun acc k -> chooseOne [All; Swords] acc (mkList WeaponMaster)]
+    sometimes choices2 25 id
+
 
     let weapon = chooseOne Enumerate.Weapons
     let singleWeapon = chooseCtor1 WeaponOfChoice weapon
