@@ -45,6 +45,33 @@ module POC1 =
         lst[rand.Next lst.Length]
     let chooseRandomRepeatedly n (lst: _ list) =
         [for _ in 1..n -> chooseRandom lst]
+
+    let sometimes ctor options =
+        [
+            for f in options do
+                yield! f ctor
+            ]
+    type Choice = Level of int | Race of Race | Coord of int * int
+    let maybe v f = f v
+    let choices options =
+        [
+            for o in options do
+                yield (o |> maybe)
+            ]
+    let makeRandomChoice choices = chooseRandom choices
+    let makeRandomChoices (choices: _ list) =
+        [   for _ in 1..(rand.Next choices.Length) do
+                yield chooseRandom choices
+            ]
+    let choices1 = choices [
+        for i in 1..10 do
+            yield (Level i)
+        for r in Enumerate.Races do
+            yield (Race r)
+        ]
+    sometimes (fun x -> [x]) choices1
+        |> makeRandomChoices
+
     let sample =
         let profession = chooseRandom Enumerate.Professions
         {
