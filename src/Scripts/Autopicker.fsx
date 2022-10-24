@@ -73,11 +73,11 @@ module POC1 =
     let choices1 =
         [levels] @ races
     sometimes choices1 25 id
-    let mkList ctor = function
+    let mkList ctor = function // should probably be called mapCtor or something
         | [v] -> [ctor v]
         | _ -> []
-    let mkList2 f = function
-        | [v1], [v2] -> [f(v1, v2)]
+    let bindList f = function // should probably be called bindChoice or something instead
+        | [v] -> f v
         | _ -> []
     let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
     sometimes [chooseWeapon] () id
@@ -90,14 +90,14 @@ module POC1 =
             fun k ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons acc k
                 let combine ctor choice k =
-                    choice (mkList (fun arg1 -> choice (mkList (fun arg2 -> ctor(arg1, arg2)))))
+                    choice (bindList (fun arg1 -> choice (mkList (fun arg2 -> ctor(arg1, arg2)))) >> k) // something is wrong on this line--why is k restricted to WeaponMasterFocus? We want it to allow WeaponMaster...
                 combine TwoWeapon chooseWeapon k
             ]
         chooseRandom suboptions
     sometimes [chooseWeaponMasterFocus] "" id
-    let chooseWeaponMaster acc k = chooseOne [All; Swords] acc (mkList WeaponMaster >> k)
+    let chooseWeaponMaster acc k = chooseWeaponMasterFocus acc (mkList WeaponMaster >> k)
     let choices2 =
-        choices1 @ [fun acc k -> chooseOne [All; Swords] acc (mkList WeaponMaster >> k)]
+        choices1 @ [fun acc k -> chooseWeaponMasterFocus acc (mkList WeaponMaster)]
     sometimes choices2 25 id
 
 
