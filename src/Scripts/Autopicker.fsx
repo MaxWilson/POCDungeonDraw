@@ -47,7 +47,11 @@ module POC1 =
         [for _ in 1..n -> chooseRandom lst]
 
     type CharacterTrait = Level of int | Race of Race | WeaponMaster of WeaponMasterFocus
-    let maybe v prob k = (if rand.Next 100 <= prob then [v] else []) |> k
+    type ChoiceParam = { probabilityInPercent: int; key: string list }
+        with
+        static member create prob = { probabilityInPercent = prob; key = [] }
+        static member appendKey newValue old = { old with key = old.key @ [newValue] }
+    let maybe v param k = (if rand.Next 100 <= param.probabilityInPercent then [v] else []) |> k
     let chooseSome options =
         [
             for o in options do
@@ -72,7 +76,7 @@ module POC1 =
         ]
     let choices1 =
         [levels] @ races
-    sometimes choices1 25 id
+    sometimes choices1 (ChoiceParam.create 25) id
     let mapCtor ctor = function // should probably be called mapCtor or something
         | [v] -> [ctor v]
         | _ -> []
@@ -82,25 +86,24 @@ module POC1 =
     let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
     sometimes [chooseWeapon] () id
     let chooseWeaponMasterFocus acc (k: WeaponMasterFocus list -> 'r) =
-        let acc = acc + "WeaponMasterFocus"
+        let acc = acc |> ChoiceParam.appendKey "WeaponMasterFocus"
         let suboptions = [
             fun k -> [All] |> k
             fun k -> [Swords] |> k
             fun k -> chooseOne Enumerate.Weapons acc (mapCtor WeaponOfChoice >> k)
             fun k ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons acc k
-                let inner arg1 = chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])
-                chooseWeapon (bindChoice inner >> k)
+                chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
                 //let combine ctor choice k =
                 //    choice (function [arg1] -> choice (function [arg2] -> (fun arg2 -> ctor(arg1, arg2))))
                 //combine TwoWeapon chooseWeapon k
             ]
         chooseRandom suboptions k
-    sometimes [chooseWeaponMasterFocus] "" (mapCtor id)
+    sometimes [chooseWeaponMasterFocus] (ChoiceParam.create 25) (mapCtor WeaponMaster)
     let chooseWeaponMaster acc k = chooseWeaponMasterFocus acc (mapCtor (WeaponMaster >> k))
     let choices2 =
-        choices1 @ [fun acc k -> chooseWeaponMasterFocus acc (mapCtor WeaponMaster)]
-    sometimes choices2 25 id
+        choices1 @ [chooseWeaponMaster]
+    sometimes choices2 (ChoiceParam.create 25) id
 
 
     let weapon = chooseOne Enumerate.Weapons
