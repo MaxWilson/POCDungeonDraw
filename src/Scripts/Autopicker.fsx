@@ -46,31 +46,33 @@ module POC1 =
     let chooseRandomRepeatedly n (lst: _ list) =
         [for _ in 1..n -> chooseRandom lst]
 
-    let sometimes ctor options =
-        [
-            for f in options do
-                yield! f ctor
-            ]
-    type Choice = Level of int | Race of Race | Coord of int * int
-    let maybe v f = f v
-    let choices options =
+    type CharacterTrait = Level of int | Race of Race | Coord of int * int
+    let maybe v () = if rand.Next 100 <= 50 then [v] else []
+    let chooseSome options =
         [
             for o in options do
                 yield (o |> maybe)
             ]
+    let chooseOne (choices : _ list) _ =
+        [choices |> chooseRandom]
     let makeRandomChoice choices = chooseRandom choices
-    let makeRandomChoices (choices: _ list) =
-        [   for _ in 1..(rand.Next choices.Length) do
-                yield chooseRandom choices
+    type MenuItem<'a, 'r> = 'a -> 'r
+    let sometimes (choices: MenuItem<_,_> list) accum k =
+        [
+            for choice in choices do
+                yield! (choice accum) |> k
             ]
-    let choices1 = choices [
+    let levels = chooseOne [
         for i in 1..10 do
             yield (Level i)
+        ]
+    let races = chooseSome [
         for r in Enumerate.Races do
             yield (Race r)
         ]
-    sometimes (fun x -> [x]) choices1
-        |> makeRandomChoices
+    let choices1 =
+        [levels] @ races @ weaponMaster
+    sometimes choices1 () id
 
     let sample =
         let profession = chooseRandom Enumerate.Professions
