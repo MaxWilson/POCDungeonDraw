@@ -90,7 +90,7 @@ module POC1 =
             fun k ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons acc k
                 let inner arg1 = chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])
-                chooseWeapon ((function [arg1] -> inner arg1 | _ -> []) >> k)
+                chooseWeapon (bindChoice inner >> k)
                 //let combine ctor choice k =
                 //    choice (function [arg1] -> choice (function [arg2] -> (fun arg2 -> ctor(arg1, arg2))))
                 //combine TwoWeapon chooseWeapon k
