@@ -47,20 +47,20 @@ module POC1 =
         [for _ in 1..n -> chooseRandom lst]
 
     type CharacterTrait = Level of int | Race of Race | WeaponMaster of WeaponMasterFocus
-    let maybe v prob = if rand.Next 100 <= prob then [v] else []
+    let maybe v prob k = (if rand.Next 100 <= prob then [v] else []) |> k
     let chooseSome options =
         [
             for o in options do
                 yield (o |> maybe)
             ]
-    let chooseOne (choices : _ list) _ =
-        [choices |> chooseRandom]
+    let chooseOne (choices : _ list) acc k =
+        [choices |> chooseRandom] |> k
     let makeRandomChoice choices = chooseRandom choices
     type MenuItem<'a, 'r> = 'a -> 'r
     let sometimes (choices: MenuItem<_,_> list) accum k =
         [
             for choice in choices do
-                yield! (choice accum) |> k
+                yield! (choice accum k)
             ]
     let levels = chooseOne [
         for i in 1..10 do
