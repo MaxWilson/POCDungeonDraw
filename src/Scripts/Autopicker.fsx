@@ -51,11 +51,12 @@ module POC1 =
         with
         static member create prob = { probabilityInPercent = prob; key = [] }
         static member appendKey newValue old = { old with key = old.key @ [newValue] }
-    let maybe v param k = (if rand.Next 100 <= param.probabilityInPercent then [v] else []) |> k
+    let maybe choice param k = (if rand.Next 100 <= param.probabilityInPercent then choice param k else k [])
+    let generate v param k = (if rand.Next 100 <= param.probabilityInPercent then [v] else []) |> k
     let chooseSome options =
         [
             for o in options do
-                yield (o |> maybe)
+                yield (o |> generate |> maybe)
             ]
     let chooseOne (choices : _ list) acc k =
         [choices |> chooseRandom] |> k
@@ -100,10 +101,17 @@ module POC1 =
             ]
         chooseRandom suboptions k
     sometimes [chooseWeaponMasterFocus] (ChoiceParam.create 25) (mapCtor WeaponMaster)
+    type Menu<'input, 'acc, 'r> = (ChoiceParam -> ('input -> 'acc) -> 'r) list
     let chooseWeaponMaster acc k = chooseWeaponMasterFocus acc (mapCtor (WeaponMaster >> k))
+    sometimes [chooseWeaponMaster] (ChoiceParam.create 25) id
+    sometimes choices1 (ChoiceParam.create 25) id
+    let x = [chooseWeaponMaster]
+    let y = choices1
+    sometimes (choices1@choices1) (ChoiceParam.create 25) id
+
     let choices2 =
-        choices1 @ [chooseWeaponMaster]
-    sometimes choices2 (ChoiceParam.create 25) id
+        choices1 @ [maybe (fun acc k -> chooseWeaponMasterFocus acc (mapCtor (WeaponMaster)))]
+    sometimes choices2 (ChoiceParam.create 50) id
 
 
     let weapon = chooseOne Enumerate.Weapons
