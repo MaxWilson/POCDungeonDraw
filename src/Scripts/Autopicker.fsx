@@ -91,6 +91,7 @@ module POC1 =
             let acc = acc |> ChoiceParam.appendKey label
             chooseRandom suboptions k acc
         member _.a v k acc = k [v]
+        member _.one options k = chooseOne options k
         member _.oneCtor options ctor k = chooseOne options (mapCtor ctor >> k)
         member _.ctor2 k acc = // work in progress here
             let chooseWeapon k = chooseOne Enumerate.Weapons k acc
@@ -98,12 +99,13 @@ module POC1 =
                 choice ((bindChoice (fun arg1 -> choice (mapCtor (fun arg2 -> ctor(arg1, arg2))))) >> k)
             //let choice = combine TwoWeapon chooseWeapon k
             chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
+        member _.ctor choice ctor k = choice (mapCtor ctor >> k)
     let compose = Compose()
     let chooseWeaponMasterFocus k =
         compose.from "WeaponMasterFocus" [
             compose.a All
             compose.a Swords
-            compose.oneCtor Enumerate.Weapons WeaponOfChoice
+            compose.ctor (compose.one Enumerate.Weapons) WeaponOfChoice
             fun k acc ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons k acc
                 let combine ctor choice k =
@@ -121,9 +123,8 @@ module POC1 =
     let x = [chooseWeaponMaster]
     let y = choices1
     sometimes (choices1@choices1) id (ChoiceParam.create 25)
-    let compose1 choice ctor k = choice (mapCtor ctor >> k)
     let choices2 =
-        choices1 @ [maybe (compose1 chooseWeaponMasterFocus WeaponMaster)]
+        choices1 @ [maybe (compose.ctor chooseWeaponMasterFocus WeaponMaster)]
     sometimes choices2 id (ChoiceParam.create 50)
 
 
