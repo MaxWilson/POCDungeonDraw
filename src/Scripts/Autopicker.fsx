@@ -86,25 +86,26 @@ module POC1 =
         | _ -> []
     let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
     sometimes [chooseWeapon] id ()
+    type ComposedChoice<'acc, 'intermediateState, 'r> = ('intermediateState -> 'r) -> 'acc -> 'r
     type Compose() =
-        member _.from label suboptions k acc =
+        member _.from label (suboptions: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun k acc ->
             let acc = acc |> ChoiceParam.appendKey label
             chooseRandom suboptions k acc
-        member _.a v k acc = k [v]
-        member _.oneOf label options k acc = chooseOne options k (acc |> ChoiceParam.appendKey label)
-        member _.ctor2 k acc = // work in progress here
-            let chooseWeapon k = chooseOne Enumerate.Weapons k acc
-            let combine ctor choice k =
-                choice ((bindChoice (fun arg1 -> choice (mapCtor (fun arg2 -> ctor(arg1, arg2))))) >> k)
-            //let choice = combine TwoWeapon chooseWeapon k
-            chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
+        member _.a v : ComposedChoice<_,_,_> = fun k acc -> k [v]
+        member _.oneOf label options : ComposedChoice<_,_,_> = fun k acc -> chooseOne options k (acc |> ChoiceParam.appendKey label)
+        member _.ctor2 ctor choice1 choice2 : ComposedChoice<_,_,_> = fun k acc ->
+            let bindAcc c k = c k acc
+            let choice1 k = choice1 k acc
+            let choice2 k = choice2 k acc
+            choice1 (bindChoice (fun arg1 -> choice2 (function [arg2] -> [ctor(arg1, arg2)] | _ -> []) acc) >> k) acc
         member _.ctor choice ctor k = choice (mapCtor ctor >> k)
     let compose = Compose()
-    let chooseWeaponMasterFocus k =
+    let chooseWeaponMasterFocus k acc =
         compose.from "WeaponMasterFocus" [
             compose.a All
             compose.a Swords
             compose.ctor (compose.oneOf "WeaponFocus" Enumerate.Weapons) WeaponOfChoice
+            //compose.ctor2 TwoWeapon (chooseOne Enumerate.Weapons k) (chooseOne Enumerate.Weapons k)
             fun k acc ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons k acc
                 let combine ctor choice k =
@@ -113,8 +114,8 @@ module POC1 =
                 let choice2 = chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
                 choice2
             ]
-            k
-    sometimes [chooseWeaponMasterFocus] (mapCtor WeaponMaster) (ChoiceParam.create 25)
+            k acc
+    sometimes [(chooseWeaponMasterFocus: ComposedChoice<_,_,_>)] (mapCtor WeaponMaster) (ChoiceParam.create 25)
     type Menu<'input, 'acc, 'r> = (ChoiceParam -> ('input -> 'acc) -> 'r) list
     let inline chooseWeaponMaster acc k = chooseWeaponMasterFocus (mapCtor (WeaponMaster >> k)) acc
     sometimes [chooseWeaponMaster] (ChoiceParam.create 25) id
