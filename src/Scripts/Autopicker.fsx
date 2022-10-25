@@ -93,10 +93,7 @@ module POC1 =
             chooseRandom suboptions k acc
         member _.a v : ComposedChoice<_,_,_> = fun k acc -> k [v]
         member _.oneOf label options : ComposedChoice<_,_,_> = fun k acc -> chooseOne options k (acc |> ChoiceParam.appendKey label)
-        member _.ctor2 ctor choice1 choice2 : ComposedChoice<_,_,_> = fun k acc ->
-            let bindAcc c k = c k acc
-            let choice1 k = choice1 k acc
-            let choice2 k = choice2 k acc
+        member _.ctor2 ctor (choice1: ComposedChoice<_,_,_>) (choice2 : ComposedChoice<_,_,_>) : ComposedChoice<_,_,_> = fun k acc ->
             choice1 (bindChoice (fun arg1 -> choice2 (function [arg2] -> [ctor(arg1, arg2)] | _ -> []) acc) >> k) acc
         member _.ctor choice ctor : ComposedChoice<_,_,_> = fun k -> choice (mapCtor ctor >> k)
     let compose = Compose()
