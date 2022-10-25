@@ -98,9 +98,10 @@ module POC1 =
             let choice1 k = choice1 k acc
             let choice2 k = choice2 k acc
             choice1 (bindChoice (fun arg1 -> choice2 (function [arg2] -> [ctor(arg1, arg2)] | _ -> []) acc) >> k) acc
-        member _.ctor choice ctor k = choice (mapCtor ctor >> k)
+        member _.ctor choice ctor : ComposedChoice<_,_,_> = fun k -> choice (mapCtor ctor >> k)
     let compose = Compose()
-    let chooseWeaponMasterFocus k acc =
+    let chooseWeaponMasterFocus (k: _ -> 'r) =
+        let x: ComposedChoice<_,_,'r> = compose.ctor (compose.oneOf "WeaponFocus" Enumerate.Weapons) WeaponOfChoice
         compose.from "WeaponMasterFocus" [
             compose.a All
             compose.a Swords
@@ -114,7 +115,7 @@ module POC1 =
                 let choice2 = chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
                 choice2
             ]
-            k acc
+            k
     sometimes [(chooseWeaponMasterFocus: ComposedChoice<_,_,_>)] (mapCtor WeaponMaster) (ChoiceParam.create 25)
     type Menu<'input, 'acc, 'r> = (ChoiceParam -> ('input -> 'acc) -> 'r) list
     let inline chooseWeaponMaster acc k = chooseWeaponMasterFocus (mapCtor (WeaponMaster >> k)) acc
