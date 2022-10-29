@@ -1,9 +1,8 @@
-// First we want a way to define and use generic APIs. I'm not sure that the SRTP-based approach is superior to the inheritance-based approach frankly.
-module Autopicker
-
 #I __SOURCE_DIRECTORY__
 #I ".."
 #load "Common.fs"
+#load "Lib\Autopicker.fs"
+#load "DungeonFantasy\Chargen.fs"
 
 module POC1 =
     type Weapon = Rapier | Longsword | Shield | MainGauche | Bow

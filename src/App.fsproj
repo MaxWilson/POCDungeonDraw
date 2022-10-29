@@ -8,6 +8,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common.fs" />
+    <Compile Include="Lib\Autopicker.fs" />
+    <Compile Include="DungeonFantasy\Chargen.fs" />
     <None Include="Scripts\Autopicker.fsx" />
     <None Include="Binding.Ably.fs" />
     <Compile Include="Components.fs" />
