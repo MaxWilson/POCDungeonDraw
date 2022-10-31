@@ -3,7 +3,8 @@
 #load "Common.fs"
 #load "Lib\Autopicker.fs"
 #load "DungeonFantasy\Chargen.fs"
-
+open Lib.Autopicker
+open Lib.Autopicker.Choice
 module POC1 =
     type Weapon = Rapier | Longsword | Shield | MainGauche | Bow
     type WeaponMasterFocus = All | Swords | TwoWeapon of Weapon * Weapon | WeaponOfChoice of Weapon
@@ -77,25 +78,8 @@ module POC1 =
     let choices1 =
         [levels] @ races
     sometimes choices1 id (ChoiceParam.create 25)
-    let mapCtor ctor = function // should probably be called mapCtor or something
-        | [v] -> [ctor v]
-        | _ -> []
-    let bindChoice f = function // should probably be called bindChoice or something instead
-        | [v] -> f v
-        | _ -> []
     let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
     sometimes [chooseWeapon] id ()
-    type ComposedChoice<'acc, 'intermediateState, 'r> = ('intermediateState -> 'r) -> 'acc -> 'r
-    type Compose() =
-        member _.from label (suboptions: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun k acc ->
-            let acc = acc |> ChoiceParam.appendKey label
-            chooseRandom suboptions k acc
-        member _.a v : ComposedChoice<_,_,_> = fun k acc -> k [v]
-        member _.oneOf label options : ComposedChoice<_,_,_> = fun k acc -> chooseOne options k (acc |> ChoiceParam.appendKey label)
-        member _.ctor2 ctor (choice1: ComposedChoice<_,_,_>) (choice2 : ComposedChoice<_,_,_>) : ComposedChoice<_,_,_> = fun k acc ->
-            choice1 (bindChoice (fun arg1 -> choice2 (function [arg2] -> [ctor(arg1, arg2)] | _ -> []) acc) >> k) acc
-        member _.ctor choice ctor : ComposedChoice<_,_,_> = fun k -> choice (mapCtor ctor >> k)
-    let compose = Compose()
     let chooseWeaponMasterFocus (k: _ -> 'r) =
         let x: ComposedChoice<_,_,'r> = compose.ctor (compose.oneOf "WeaponFocus" Enumerate.Weapons) WeaponOfChoice
         compose.from "WeaponMasterFocus" [

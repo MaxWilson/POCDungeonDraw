@@ -6,6 +6,10 @@ let thunk1 f x _ = f x
 let thunk2 f x y = f x y
 let notImpl msg = failwith $"Not implemented! Talk to Max if you want this feature. {msg}"
 
+let rand = System.Random()
+let chooseRandom (lst: _ list) =
+    lst[rand.Next lst.Length]
+
 let inline trace label x =
 #if DEBUG
     printfn $"Trace/{label}: {x}"
