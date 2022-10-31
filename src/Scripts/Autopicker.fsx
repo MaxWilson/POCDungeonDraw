@@ -81,18 +81,20 @@ module POC1 =
     let chooseWeapon acc k = chooseOne Enumerate.Weapons acc k
     sometimes [chooseWeapon] id ()
     let chooseWeaponMasterFocus (k: _ -> 'r) =
+        let x = fun k -> compose.oneOf "WeaponFocus" Enumerate.Weapons k
         let x: ComposedChoice<_,_,'r> = compose.ctor (compose.oneOf "WeaponFocus" Enumerate.Weapons) WeaponOfChoice
         compose.from "WeaponMasterFocus" [
             compose.a All
             compose.a Swords
             compose.ctor (compose.oneOf "WeaponFocus" Enumerate.Weapons) WeaponOfChoice
-            //compose.ctor2 TwoWeapon (chooseOne Enumerate.Weapons k) (chooseOne Enumerate.Weapons k)
+            x
+            compose.ctor2 TwoWeapon (compose.oneOf "TwoWeaponFocus1" Enumerate.Weapons) (fun gen -> compose.oneOf "TwoWeaponFocus2" Enumerate.Weapons (function Some arg2 -> gen arg2 | None -> None))
             fun k acc ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons k acc
                 let combine ctor choice k =
-                    choice ((bindChoice (fun arg1 -> choice (mapCtor (fun arg2 -> ctor(arg1, arg2))))) >> k)
+                    choice ((Option.bind (fun arg1 -> choice (Option.map (fun arg2 -> ctor(arg1, arg2))))) >> k)
                 //let choice = combine TwoWeapon chooseWeapon k
-                let choice2 = chooseWeapon (bindChoice (fun arg1 -> chooseWeapon (function [arg2] -> [TwoWeapon(arg1, arg2)] | _ -> [])) >> k)
+                let choice2 = chooseWeapon (Option.bind (fun arg1 -> chooseWeapon (function arg2 -> TwoWeapon(arg1, arg2) |> Some | _ -> None)) >> k)
                 choice2
             ]
             k
