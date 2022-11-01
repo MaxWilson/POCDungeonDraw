@@ -32,9 +32,18 @@ type Enumerate =
 
 let weaponMaster() : ComposedChoice<_,_,_> =
     choose.ctor WeaponMaster (
-        choose.from "WeaponMasterFocus" [
+        choose.randomly [
             choose.a All
             choose.a Swords
             choose.ctor WeaponOfChoice (choose.oneOf "Weapon" Enumerate.Weapons)
             choose.ctor2 TwoWeapon (choose.oneOf "Weapon" Enumerate.Weapons) (choose.oneOf "Weapon2" Enumerate.Weapons)
             ])
+
+let traits() =
+    choose.some [
+        choose.ctor Profession (choose.oneOf "Profession" Enumerate.Professions)
+        choose.ctor Advantage (weaponMaster())
+        choose.ctor Advantage (choose.someOf [DangerSense; PeripheralVision; HeroicArcher; Magery 6])
+        ]
+
+let x = ()
