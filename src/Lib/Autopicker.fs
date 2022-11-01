@@ -36,6 +36,7 @@ type Compose() =
             | [] -> None
             choices |> recur
         chooseOne options yield' (acc |> Choice.Param.appendKey label)
+    // a choice that returns the sum of every subchoice that is chosen from among its suboptions. Might be useless--I can't think of a scenario for this.
     member _.some (suboptions: ComposedChoice<_,_,_> list) = fun yield' acc ->
         let mutable allSuccess = true
         let chosen =
@@ -46,6 +47,10 @@ type Compose() =
                     | None -> allSuccess <- false
                 ]
         if allSuccess then chosen |> Some else None
+    // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation)
+    member _.uplift (choice : ComposedChoice<_,_,'domainType>) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
+        choice (fun intermediate -> yield' intermediate |> function [v] -> Some v) acc
+    // a choice that returns the sum of everything its subchoices return
     member _.aggregate (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         let mutable allSucceed = true
         let chosen = [
