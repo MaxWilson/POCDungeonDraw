@@ -27,7 +27,7 @@ type Compose() =
             choices |> chooseRandom |> pickOne yield'
         chooseOne options yield' (acc |> Choice.Param.appendKey label)
     member _.ctor2 (ctor: _ -> 'constructedType) (choice1: ComposedChoice<'acc,'arg1,_>) (choice2 : ComposedChoice<'acc,'arg2,_>) : ComposedChoice<'acc,'constructedType,'domainType> = fun yield' acc ->
-        choice1 (Option.bind (fun arg1 -> ctor(1, 2) |> pickOne yield')) acc
+        choice1 (Option.bind (fun arg1 -> choice2 (Option.bind(fun arg2 -> ctor(arg1, arg2) |> pickOne yield')) acc)) acc
 
     member _.ctor choice ctor : ComposedChoice<_,_,_> = fun yield' -> choice (Option.bind (ctor >> Some >> yield'))
 let choose = Compose()
