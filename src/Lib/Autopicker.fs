@@ -3,7 +3,7 @@
 // in order of actual runtime order the values go acc => intermediate => domainType
 // therefore the type is create -> acc -> domainType option
 // and the runtime order of the stages is choice => create.
-// There are options all along the pipeline because choosing could fail to resolve at any stage due to ambiguity, i.e. lack of user input.
+// There are options all along the pipeline because choosing could fail to resolve at any stage due to e.g. lack of user input, or because the user picked a different option.
 // Only when everything in the pipeline returns a definite Some [results, which could be empty] is the final choice definitely made.
 type ComposedChoice<'acc, 'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> 'acc -> 'domainType option
 
@@ -29,5 +29,5 @@ type Compose() =
     member _.ctor2 (ctor: _ -> 'constructedType) (choice1: ComposedChoice<'acc,'arg1,_>) (choice2 : ComposedChoice<'acc,'arg2,_>) : ComposedChoice<'acc,'constructedType,'domainType> = fun create acc ->
         choice1 (Option.bind (fun arg1 -> ctor(1, 2) |> pickOne create)) acc
 
-    member _.ctor choice ctor : ComposedChoice<_,_,_> = fun create -> choice (Option.map (ctor >> create))
-let compose = Compose()
+    member _.ctor choice ctor : ComposedChoice<_,_,_> = fun create -> choice (Option.bind (ctor >> create))
+let choose = Compose()

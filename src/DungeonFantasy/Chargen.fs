@@ -31,7 +31,9 @@ type Enumerate =
 
 
 let menu create acc =
-    compose.from "WeaponMasterFocus" [
-        compose.a All
-        compose.a Swords
+    choose.from "WeaponMasterFocus" [
+        choose.a All
+        choose.a Swords
+        choose.oneOf "Focus" [All]
+        choose.ctor (choose.oneOf "Weapon" [Rapier]) WeaponOfChoice
         ]
