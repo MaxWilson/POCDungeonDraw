@@ -36,4 +36,7 @@ let menu create acc =
         choose.a Swords
         choose.oneOf "Focus" [All]
         choose.ctor (choose.oneOf "Weapon" [Rapier]) WeaponOfChoice
+        choose.ctor (choose.oneOf "Weapon" [Rapier]) (fun w -> TwoWeapon(w, Shield))
+        choose.ctor2 (choose.oneOf "Weapon" [Rapier]) (choose.oneOf "Weapon" [Rapier]) (fun (w,_) -> WeaponOfChoice(w))
+        choose.ctor2 TwoWeapon (compose.oneOf "TwoWeaponFocus1" Enumerate.Weapons) (fun gen -> compose.oneOf "TwoWeaponFocus2" Enumerate.Weapons (function Some arg2 -> gen arg2 |> Some | None -> None))
         ]
