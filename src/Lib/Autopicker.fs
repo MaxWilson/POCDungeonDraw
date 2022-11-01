@@ -37,12 +37,13 @@ type Compose() =
         let chosen = [
             for choice in options do
                 match choice id acc with
-                | Some v -> yield v
+                | Some v ->
+                    match yield' (Some v) with
+                    | Some domainType -> yield! domainType
+                    | None -> allSucceed <- false
                 | None -> allSucceed <- false
             ]
-        if allSucceed then
-            chosen |> List.collect (fun x -> yield' (Some x) |> Option.get) |> Some
-            notImpl()
+        if allSucceed then chosen |> Some
         else None
 
     member _.ctor ctor choice: ComposedChoice<'acc,'arg1,'domainType> = fun yield' -> choice (Option.bind (ctor >> pickOne yield'))
