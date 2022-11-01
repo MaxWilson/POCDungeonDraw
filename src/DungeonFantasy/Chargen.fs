@@ -34,9 +34,6 @@ let menu create acc =
     choose.from "WeaponMasterFocus" [
         choose.a All
         choose.a Swords
-        choose.oneOf "Focus" [All]
-        choose.ctor WeaponOfChoice (choose.oneOf "Weapon" [Rapier])
-        choose.ctor (fun w -> TwoWeapon(w, Shield)) (choose.oneOf "Weapon" [Rapier])
-        choose.ctor2 (fun _ -> WeaponOfChoice(Rapier)) (choose.oneOf "Weapon" [Rapier]) (choose.oneOf "Weapon" [Rapier])
-        choose.ctor2 TwoWeapon (choose.oneOf "TwoWeaponFocus1" Enumerate.Weapons) (choose.oneOf "TwoWeaponFocus2" Enumerate.Weapons)
+        choose.ctor WeaponOfChoice (choose.oneOf "Weapon" Enumerate.Weapons)
+        choose.ctor2 TwoWeapon (choose.oneOf "Weapon" Enumerate.Weapons) (choose.oneOf "Weapon2" Enumerate.Weapons)
         ]
