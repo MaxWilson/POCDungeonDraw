@@ -43,7 +43,7 @@ let traits() =
     choose.aggregate [
         choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions)
         choose.ctor Advantage (weaponMaster())
-        choose.ctor Advantage (choose.someOf [DangerSense; PeripheralVision; HeroicArcher; Magery 6])
+        choose.ctor Advantage (choose.oneValue [DangerSense; PeripheralVision; HeroicArcher; Magery 6])
         ]
 
 let x = ()
