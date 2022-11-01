@@ -24,11 +24,13 @@ let traits() =
         choose.optional (choose.ctor Advantage (choose.oneValue "Adv" [DangerSense; PeripheralVision; HeroicArcher; Magery 6]))
         choose.aggregate [
             for a in Enumerate.PrimaryAbilities do
-                yield (choose.optional (choose.a (Increase a)))
+                (choose.optional (choose.a (Increase a)))
             for adv in [DangerSense; PeripheralVision; HeroicArcher] do
-                yield (choose.optional (choose.a (Advantage adv)))
-            for m in 3..6 do
-                yield (choose.optional (choose.a (Advantage (Magery m))))
+                (choose.optional (choose.a (Advantage adv)))
+            choose.optional (choose.oneOf "Magery" [
+                for m in 3..6 do
+                    yield (choose.a (m.ToString(), Advantage (Magery m)))
+                ])
             ]
         ]
 
@@ -49,5 +51,5 @@ traits() |> pick [
 traits() |> pick [
     "Profession-Swashbuckler"
     "Increase ST"
-    "Advantage (Magery 5)"
+    "Magery-5"
     ]

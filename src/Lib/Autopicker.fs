@@ -25,6 +25,8 @@ type Compose() =
 
     // choose a value directly (or don't and fail, if the user doesn't select it)
     member _.a v : ComposedChoice<_,_,_> = fun yield' acc -> pickOne yield' (acc.appendKey (v.ToString())) v
+    // labelled overload of choose.a
+    member _.a(label, v) : ComposedChoice<_,_,_> = fun yield' acc -> pickOne yield' (acc.appendKey label) v
     // choose directly among values, not among choices
     member this.oneValue label (options: _ list) : ComposedChoice<_,_,_>  = fun yield' acc ->
         let acc = acc.appendKey label
