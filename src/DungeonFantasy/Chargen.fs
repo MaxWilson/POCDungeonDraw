@@ -35,7 +35,7 @@ let weaponMaster() : ComposedChoice<_,_,_> =
         choose.randomly [
             choose.a All
             choose.a Swords
-            choose.ctor WeaponOfChoice (choose.oneOf "Weapon" Enumerate.Weapons)
+            choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)
             choose.ctor2 TwoWeapon (choose.oneOf "Weapon" Enumerate.Weapons) (choose.oneOf "Weapon2" Enumerate.Weapons)
             ])
 

@@ -19,28 +19,30 @@ type Compose() =
     let pickSome yield' (items: _ list) =
         items |> List.map (Some >> yield')
 
+    // choose a value directly (or don't and fail, if the user doesn't select it)
     member _.a v : ComposedChoice<_,_,_> = fun yield' acc -> pickOne yield' v
+    // choose directly among values, not among choices
+    member this.oneValue label (options: _ list) =
+        this.oneOf label (options |> List.map this.a)
+    // choose among choices
     member _.oneOf label options : ComposedChoice<_,_,_> = fun yield' acc ->
         let acc = acc |> Choice.Param.appendKey label
         let chooseOne (choices : _ list) yield' acc =
             let rec recur = function
             | choice::rest ->
-                match choice id acc with
+                match choice yield' acc with
                 | Some v -> pickOne yield' v
                 | None -> recur rest
             | [] -> None
             choices |> recur
         chooseOne options yield' (acc |> Choice.Param.appendKey label)
-    member _.someOf label (options: ComposedChoice<_,_,'domainType1> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
+    member _.someOf label (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         let acc = acc |> Choice.Param.appendKey label
         let mutable allSucceed = true
         let chosen = [
             for choice in options do
-                match choice id acc with
-                | Some v ->
-                    match yield' (Some v) with
-                    | Some domainType -> yield! domainType
-                    | None -> allSucceed <- false
+                match choice yield' acc with
+                | Some v -> yield! v
                 | None -> allSucceed <- false
             ]
         if allSucceed then chosen |> Some
