@@ -31,16 +31,17 @@ type Compose() =
             | [] -> None
             choices |> recur
         chooseOne options yield' (acc |> Choice.Param.appendKey label)
-    member _.someOf label (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
+    member _.someOf label (options: ComposedChoice<_,_,'domainType> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         let acc = acc |> Choice.Param.appendKey label
-        let mutable abort = false
+        let mutable allSucceed = true
         let chosen = [
             for choice in options do
-                match choice id acc with
+                match choice yield' acc with
                 | Some v -> yield v
-                | None -> abort <- true
+                | None -> allSucceed <- false
             ]
-        if abort then None else Some (pickSome yield' chosen)
+        if allSucceed then Some chosen
+        else None
 
     member _.ctor ctor choice: ComposedChoice<'acc,'arg1,'domainType> = fun yield' -> choice (Option.bind (ctor >> pickOne yield'))
     member _.ctor2 (ctor: _ -> 'constructedType) (choice1: ComposedChoice<'acc,'arg1,_>) (choice2 : ComposedChoice<'acc,'arg2,_>) : ComposedChoice<'acc,'constructedType,'domainType> = fun yield' acc ->
