@@ -47,4 +47,10 @@ let traits() =
         choose.ctor Advantage (choose.oneValue [DangerSense; PeripheralVision; HeroicArcher; Magery 6])
         ]
 
-let x = choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions) |> choose.uplift
+let sometimes choice = choice id (Choice.Param.create 25)
+let v1 = (choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)) id (Choice.Param.create 25)
+let x0 = (choose.oneValue "Profession" Enumerate.Professions)
+let y0 = choose.uplift x0
+let x: ComposedChoice<_,Trait,Profession> = choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions)
+let v = x id (Choice.Param.create 25)
+let y: ComposedChoice<_,_,Trait list> = x |> choose.uplift

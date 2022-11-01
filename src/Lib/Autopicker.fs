@@ -10,7 +10,7 @@ type ComposedChoice<'acc, 'intermediateState, 'domainType> = ('intermediateState
 module Choice =
     type Param = { probabilityInPercent: int; key: string list }
         with
-        static member yield' prob = { probabilityInPercent = prob; key = [] }
+        static member create prob = { probabilityInPercent = prob; key = [] }
         static member appendKey newValue old = { old with key = old.key @ [newValue] }
 
 type Compose() =
@@ -22,8 +22,18 @@ type Compose() =
     // choose a value directly (or don't and fail, if the user doesn't select it)
     member _.a v : ComposedChoice<_,_,_> = fun yield' acc -> pickOne yield' v
     // choose directly among values, not among choices
-    member this.oneValue label (options: _ list) =
-        this.oneOf label (options |> List.map this.a)
+    member this.oneValue label (options: _ list) : ComposedChoice<_,_,_>  = fun yield' acc ->
+        let acc = acc |> Choice.Param.appendKey label
+        let chooseOne (choices : _ list) yield' acc =
+            let rec recur = function
+            | value::rest ->
+                match pickOne yield' value with
+                | Some v -> Some v
+                | None -> recur rest
+            | [] -> None
+            choices |> recur
+        chooseOne options yield' (acc |> Choice.Param.appendKey label)
+        //this.oneOf label (options |> List.map this.a)
     // choose among choices
     member _.oneOf label options : ComposedChoice<_,_,_> = fun yield' acc ->
         let acc = acc |> Choice.Param.appendKey label
