@@ -43,17 +43,9 @@ let weaponMaster() : ComposedChoice<_,_,_> =
 let traits() =
     choose.aggregate [
         choose.uplift (choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions))
-        choose.ctor Advantage (weaponMaster())
-        choose.ctor Advantage (choose.oneValue [DangerSense; PeripheralVision; HeroicArcher; Magery 6])
+        choose.uplift (choose.ctor Advantage (weaponMaster()))
+        choose.uplift (choose.ctor Advantage (choose.oneValue "Adv" [DangerSense; PeripheralVision; HeroicArcher; Magery 6]))
         ]
 
-let wm0() = choose.ctor Advantage (weaponMaster())
 let sometimes choice = choice id (Choice.Param.create 25)
-wm0() |> sometimes
-let v1 = (choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)) id (Choice.Param.create 25)
-let x0 = (choose.oneValue "Profession" Enumerate.Professions)
-let x1() = choose.ctor Advantage (weaponMaster())
-let y0 = choose.aggregate [choose.uplift x0; choose.uplift (choose.ctor Advantage (weaponMaster()))] |> sometimes
-let x: ComposedChoice<_,Trait,Profession> = choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions)
-let v = x id (Choice.Param.create 25)
-let y: ComposedChoice<_,_,Trait list> = x |> choose.uplift
+sometimes (traits())
