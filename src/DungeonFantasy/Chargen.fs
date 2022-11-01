@@ -32,7 +32,7 @@ type Enumerate =
 
 let weaponMaster() : ComposedChoice<_,_,_> =
     choose.ctor WeaponMaster (
-        choose.randomly [
+        choose.oneOf "Focus" [
             choose.a All
             choose.a Swords
             choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)

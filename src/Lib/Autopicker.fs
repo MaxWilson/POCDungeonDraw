@@ -33,6 +33,22 @@ type Compose() =
             | [] -> None
             choices |> recur
         chooseOne options yield' (acc |> Choice.Param.appendKey label)
+        //this.oneOf label (options |> List.map this.a)
+    // choose among choices
+    member _.oneOf label options : ComposedChoice<_,_,_> = fun yield' acc ->
+        let acc = acc |> Choice.Param.appendKey label
+        let chooseOne (choices : _ list) yield' acc =
+            let rec recur = function
+            | choice::rest ->
+                let yield0 = function
+                    | None -> None
+                    | Some intermediate -> (yield' (Some intermediate))
+                match choice yield0 acc with
+                | Some v -> pickOne yield' v
+                | None -> recur rest
+            | [] -> None
+            choices |> recur
+        chooseOne options yield' (acc |> Choice.Param.appendKey label)
     // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation)
     member _.uplift (choice : ComposedChoice<_,_,'domainType>) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         match choice id acc with
@@ -57,8 +73,5 @@ type Compose() =
         choice yield0 acc
     member _.ctor2 (ctor: _ -> 'constructedType) (choice1: ComposedChoice<'acc,'arg1,_>) (choice2 : ComposedChoice<'acc,'arg2,_>) : ComposedChoice<'acc,'constructedType,'domainType> = fun yield' acc ->
         choice1 (Option.bind (fun arg1 -> choice2 (Option.bind(fun arg2 -> ctor(arg1, arg2) |> pickOne yield')) acc)) acc
-
-    member _.randomly (suboptions: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
-        chooseRandom suboptions yield' acc
 
 let choose = Compose()
