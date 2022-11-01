@@ -30,10 +30,11 @@ type Enumerate =
         | v -> v.ToString()
 
 
-let menu create acc =
+let menu yield' =
     choose.from "WeaponMasterFocus" [
         choose.a All
         choose.a Swords
         choose.ctor WeaponOfChoice (choose.oneOf "Weapon" Enumerate.Weapons)
         choose.ctor2 TwoWeapon (choose.oneOf "Weapon" Enumerate.Weapons) (choose.oneOf "Weapon2" Enumerate.Weapons)
         ]
+        yield'
