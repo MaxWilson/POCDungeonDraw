@@ -47,7 +47,9 @@ let traits() =
         choose.ctor Advantage (choose.oneValue [DangerSense; PeripheralVision; HeroicArcher; Magery 6])
         ]
 
+let wm0() = choose.ctor Advantage (weaponMaster())
 let sometimes choice = choice id (Choice.Param.create 25)
+wm0() |> sometimes
 let v1 = (choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)) id (Choice.Param.create 25)
 let x0 = (choose.oneValue "Profession" Enumerate.Professions)
 let x1() = choose.ctor Advantage (weaponMaster())

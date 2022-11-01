@@ -74,7 +74,11 @@ type Compose() =
         if allSucceed then chosen |> Some
         else None
 
-    member _.ctor ctor choice: ComposedChoice<'acc,'arg1,'domainType> = fun yield' -> choice (Option.bind (ctor >> pickOne yield'))
+    member _.ctor ctor choice: ComposedChoice<'acc,'arg1,'domainType> = fun yield' acc ->
+        let yield0 = function
+            | None -> None
+            | Some intermediate -> (yield' (Some (ctor intermediate)))
+        choice yield0 acc
     member _.ctor2 (ctor: _ -> 'constructedType) (choice1: ComposedChoice<'acc,'arg1,_>) (choice2 : ComposedChoice<'acc,'arg2,_>) : ComposedChoice<'acc,'constructedType,'domainType> = fun yield' acc ->
         choice1 (Option.bind (fun arg1 -> choice2 (Option.bind(fun arg2 -> ctor(arg1, arg2) |> pickOne yield')) acc)) acc
 

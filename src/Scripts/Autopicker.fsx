@@ -2,9 +2,9 @@
 #I ".."
 #load "Common.fs"
 #load "Lib\Autopicker.fs"
-#load "DungeonFantasy\Chargen.fs"
 open Lib.Autopicker
 open Lib.Autopicker.Choice
+#load "DungeonFantasy\Chargen.fs"
 module POC1 =
     type Weapon = Rapier | Longsword | Shield | MainGauche | Bow
     type WeaponMasterFocus = All | Swords | TwoWeapon of Weapon * Weapon | WeaponOfChoice of Weapon
