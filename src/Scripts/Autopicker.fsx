@@ -22,6 +22,14 @@ let traits() =
         choose.mandatory (choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions))
         choose.optional (choose.ctor Advantage (weaponMaster()))
         choose.optional (choose.ctor Advantage (choose.oneValue "Adv" [DangerSense; PeripheralVision; HeroicArcher; Magery 6]))
+        choose.aggregate [
+            for a in Enumerate.PrimaryAbilities do
+                yield (choose.optional (choose.a (Increase a)))
+            for adv in [DangerSense; PeripheralVision; HeroicArcher] do
+                yield (choose.optional (choose.a (Advantage adv)))
+            for m in 3..6 do
+                yield (choose.optional (choose.a (Advantage (Magery m))))
+            ]
         ]
 
 let sometimes choice = choice id (Choice.Param<_>.create 25)
@@ -40,5 +48,6 @@ traits() |> pick [
     ]
 traits() |> pick [
     "Profession-Swashbuckler"
-    "Adv-Magery 6"
+    "Increase ST"
+    "Advantage (Magery 5)"
     ]
