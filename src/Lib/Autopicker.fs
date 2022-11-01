@@ -2,7 +2,9 @@
 
 // in order of actual runtime order the values go acc => intermediate => domainType
 // therefore the type is create -> acc -> domainType option
-// and the runtime order of the stages is choice => create
+// and the runtime order of the stages is choice => create.
+// There are options all along the pipeline because choosing could fail to resolve at any stage due to ambiguity, i.e. lack of user input.
+// Only when everything in the pipeline returns a definite Some [results, which could be empty] is the final choice definitely made.
 type ComposedChoice<'acc, 'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> 'acc -> 'domainType option
 
 module Choice =
