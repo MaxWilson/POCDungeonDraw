@@ -30,10 +30,11 @@ type Enumerate =
         | v -> v.ToString()
 
 
-let weaponMasterFocus() : ComposedChoice<_,_,_> =
-    choose.from "WeaponMasterFocus" [
-        choose.a All
-        choose.a Swords
-        choose.ctor WeaponOfChoice (choose.oneOf "Weapon" Enumerate.Weapons)
-        choose.ctor2 TwoWeapon (choose.oneOf "Weapon" Enumerate.Weapons) (choose.oneOf "Weapon2" Enumerate.Weapons)
-        ]
+let weaponMaster() : ComposedChoice<_,_,_> =
+    choose.ctor WeaponMaster (
+        choose.from "WeaponMasterFocus" [
+            choose.a All
+            choose.a Swords
+            choose.ctor WeaponOfChoice (choose.oneOf "Weapon" Enumerate.Weapons)
+            choose.ctor2 TwoWeapon (choose.oneOf "Weapon" Enumerate.Weapons) (choose.oneOf "Weapon2" Enumerate.Weapons)
+            ])
