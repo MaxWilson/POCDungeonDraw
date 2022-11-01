@@ -88,7 +88,7 @@ module POC1 =
             compose.a Swords
             compose.ctor (compose.oneOf "WeaponFocus" Enumerate.Weapons) WeaponOfChoice
             x
-            compose.ctor2 TwoWeapon (compose.oneOf "TwoWeaponFocus1" Enumerate.Weapons) (fun gen -> compose.oneOf "TwoWeaponFocus2" Enumerate.Weapons (function Some arg2 -> gen arg2 | None -> None))
+            compose.ctor2 TwoWeapon (compose.oneOf "TwoWeaponFocus1" Enumerate.Weapons) (fun gen -> compose.oneOf "TwoWeaponFocus2" Enumerate.Weapons (function Some arg2 -> gen arg2 |> Some | None -> None))
             fun k acc ->
                 let chooseWeapon k = chooseOne Enumerate.Weapons k acc
                 let combine ctor choice k =

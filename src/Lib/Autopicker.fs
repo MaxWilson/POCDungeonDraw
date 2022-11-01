@@ -17,7 +17,15 @@ type Compose() =
         let chooseOne (choices : _ list) gen acc =
             choices |> chooseRandom |> gen
         chooseOne options (Some >> gen) (acc |> Choice.Param.appendKey label)
-    member _.ctor2 ctor (choice1: ComposedChoice<_,_,_>) (choice2 : ComposedChoice<_,_,_>) : ComposedChoice<_,_,_> = fun gen acc ->
-        choice1 (Option.map (fun arg1 -> choice2 (function arg2 -> ctor(arg1, arg2)) acc) >> k) acc
+    member _.ctor2 (ctor: _ -> 'ctor) (choice1: ComposedChoice<'gen1,'acc,'arg1>) (choice2 : ComposedChoice<'gen2,'acc,'arg2>) : ComposedChoice<_,'acc,'r> = fun gen acc ->
+        let gen (x: 'arg1) (y: 'arg2) = ctor(x,y)
+        let gen2 arg1 arg2 =
+            match arg2 with
+            | Some arg2 -> gen arg1 arg2 |> Some
+            | None -> None
+        let gen1 = function
+            | Some arg1 -> fun acc -> choice2 (fun arg2 -> gen2 arg1 arg2) acc
+            | None -> fun acc -> None
+        choice1 gen1
     member _.ctor choice ctor : ComposedChoice<_,_,_> = fun gen -> choice (Option.map ctor >> k)
 let compose = Compose()
