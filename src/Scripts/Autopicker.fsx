@@ -7,49 +7,31 @@ open Lib.Autopicker.Choice
 #load "DungeonFantasy\Chargen.fs"
 open DungeonFantasy.Chargen
 
-let weaponMaster() : ComposedChoice<_,_,_> =
-    choose.ctor WeaponMaster (
-        choose.oneOf "Focus" [
-            choose.a All
-            choose.a Swords
-            choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)
-            choose.ctor2 TwoWeapon (choose.oneValue "Weapon" Enumerate.Weapons) (choose.oneValue "Weapon2" Enumerate.Weapons)
-            ])
-
-
-let traits() =
-    choose.aggregate [
-        choose.mandatory (choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions))
-        choose.optional (choose.ctor Advantage (weaponMaster()))
-        choose.optional (choose.ctor Advantage (choose.oneValue "Adv" [DangerSense; PeripheralVision; HeroicArcher; Magery 6]))
-        choose.aggregate [
-            for a in Enumerate.PrimaryAbilities do
-                (choose.optional (choose.a (Increase a)))
-            for adv in [DangerSense; PeripheralVision; HeroicArcher] do
-                (choose.optional (choose.a (Advantage adv)))
-            choose.optional (choose.oneOf "Magery" [
-                for m in 3..6 do
-                    yield (choose.a (m.ToString(), Advantage (Magery m)))
-                ])
-            ]
-        ]
-
 let sometimes choice = choice id (Choice.Param<_>.create 25)
 let trace (acc:Choice.Param<_>) =
     let trace key =
         let v = acc.recognizer key
-        printfn $"{key}: {v}"
+        if key <> "" then
+            printfn $"{key}: {v}"
         v
     { acc with recognizer = trace }
 let pick (indices: string list) choice = choice id (Choice.Param<_>.create indices |> trace)
 sometimes (traits())
 traits() |> pick [
     "Profession-Swashbuckler"
-    "Focus-Weapon-Rapier"
-    "Adv-Magery 6"
+    "WeaponMaster-Single-Rapier"
+    "Magery-0"
     ]
+
+printfn "~~~~~~~~~~~~~~"
+
 traits() |> pick [
     "Profession-Swashbuckler"
     "Increase ST"
+    "Increase DX"
     "Magery-5"
+    "WeaponMaster-Two-Weapon1-Rapier"
+    "WeaponMaster-Two-Weapon2-MainGauche"
     ]
+
+traits() |> pick ["WeaponMaster-Single-Rapier"]
