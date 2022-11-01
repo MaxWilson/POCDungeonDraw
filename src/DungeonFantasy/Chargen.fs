@@ -36,12 +36,12 @@ let weaponMaster() : ComposedChoice<_,_,_> =
             choose.a All
             choose.a Swords
             choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)
-            choose.ctor2 TwoWeapon (choose.oneOf "Weapon" Enumerate.Weapons) (choose.oneOf "Weapon2" Enumerate.Weapons)
+            choose.ctor2 TwoWeapon (choose.oneValue "Weapon" Enumerate.Weapons) (choose.oneValue "Weapon2" Enumerate.Weapons)
             ])
 
 let traits() =
-    choose.some [
-        choose.ctor Profession (choose.oneOf "Profession" Enumerate.Professions)
+    choose.aggregate [
+        choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions)
         choose.ctor Advantage (weaponMaster())
         choose.ctor Advantage (choose.someOf [DangerSense; PeripheralVision; HeroicArcher; Magery 6])
         ]

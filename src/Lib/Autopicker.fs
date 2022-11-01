@@ -36,8 +36,17 @@ type Compose() =
             | [] -> None
             choices |> recur
         chooseOne options yield' (acc |> Choice.Param.appendKey label)
-    member _.someOf label (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
-        let acc = acc |> Choice.Param.appendKey label
+    member _.some (suboptions: ComposedChoice<_,_,_> list) = fun yield' acc ->
+        let mutable allSuccess = true
+        let chosen =
+            [   for ix, choice in suboptions |> List.mapiOneBased tuple2 do
+                    let acc = acc |> Choice.Param.appendKey (ix.ToString())
+                    match choice yield' acc with
+                    | Some v -> yield v
+                    | None -> allSuccess <- false
+                ]
+        if allSuccess then chosen |> Some else None
+    member _.aggregate (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         let mutable allSucceed = true
         let chosen = [
             for choice in options do
@@ -54,15 +63,5 @@ type Compose() =
 
     member _.randomly (suboptions: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
         chooseRandom suboptions yield' acc
-    member _.some (suboptions: ComposedChoice<_,_,_> list) = fun yield' acc ->
-        let mutable allSuccess = true
-        let lst =
-            [   for ix, choice in suboptions |> List.mapiOneBased tuple2 do
-                    let acc = acc |> Choice.Param.appendKey (ix.ToString())
-                    match choice id acc with
-                    | Some v -> yield v
-                    | None -> allSuccess <- false
-                ]
-        if allSuccess then pickSome yield' lst |> Some else None
 
 let choose = Compose()

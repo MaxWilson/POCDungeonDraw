@@ -13,6 +13,7 @@ let chooseRandom (lst: _ list) =
 
 module List =
     let mapiOneBased f lst = lst |> List.mapi (fun ix -> f (ix + 1))
+    let create v = [v]
 
 let inline trace label x =
 #if DEBUG
