@@ -30,22 +30,3 @@ type Enumerate =
         | v -> v.ToString()
 
 
-let weaponMaster() : ComposedChoice<_,_,_> =
-    choose.ctor WeaponMaster (
-        choose.oneOf "Focus" [
-            choose.a All
-            choose.a Swords
-            choose.ctor WeaponOfChoice (choose.oneValue "Weapon" Enumerate.Weapons)
-            choose.ctor2 TwoWeapon (choose.oneValue "Weapon" Enumerate.Weapons) (choose.oneValue "Weapon2" Enumerate.Weapons)
-            ])
-
-
-let traits() =
-    choose.aggregate [
-        choose.uplift (choose.ctor Profession (choose.oneValue "Profession" Enumerate.Professions))
-        choose.uplift (choose.ctor Advantage (weaponMaster()))
-        choose.uplift (choose.ctor Advantage (choose.oneValue "Adv" [DangerSense; PeripheralVision; HeroicArcher; Magery 6]))
-        ]
-
-let sometimes choice = choice id (Choice.Param.create 25)
-sometimes (traits())
