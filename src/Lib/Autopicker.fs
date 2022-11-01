@@ -49,7 +49,9 @@ type Compose() =
         if allSuccess then chosen |> Some else None
     // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation)
     member _.uplift (choice : ComposedChoice<_,_,'domainType>) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
-        choice (fun intermediate -> yield' intermediate |> function [v] -> Some v) acc
+        match choice id acc with
+        | Some v -> (yield' (Some [v]))
+        | None -> None
     // a choice that returns the sum of everything its subchoices return
     member _.aggregate (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         let mutable allSucceed = true
