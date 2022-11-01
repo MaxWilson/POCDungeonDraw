@@ -20,7 +20,7 @@ type Compose() =
         items |> List.map (Some >> yield')
     member _.from label (suboptions: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
         let acc = acc |> Choice.Param.appendKey label
-        (chooseRandom suboptions) |> (pickOne yield')
+        chooseRandom suboptions yield' acc
     member _.a v : ComposedChoice<_,_,_> = fun yield' acc -> pickOne yield' v
     member _.oneOf label options : ComposedChoice<_,_,_> = fun yield' acc ->
         let chooseOne (choices : _ list) yield' acc =
