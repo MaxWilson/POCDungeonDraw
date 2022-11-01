@@ -33,30 +33,6 @@ type Compose() =
             | [] -> None
             choices |> recur
         chooseOne options yield' (acc |> Choice.Param.appendKey label)
-        //this.oneOf label (options |> List.map this.a)
-    // choose among choices
-    member _.oneOf label options : ComposedChoice<_,_,_> = fun yield' acc ->
-        let acc = acc |> Choice.Param.appendKey label
-        let chooseOne (choices : _ list) yield' acc =
-            let rec recur = function
-            | choice::rest ->
-                match choice yield' acc with
-                | Some v -> pickOne yield' v
-                | None -> recur rest
-            | [] -> None
-            choices |> recur
-        chooseOne options yield' (acc |> Choice.Param.appendKey label)
-    // a choice that returns the sum of every subchoice that is chosen from among its suboptions. Might be useless--I can't think of a scenario for this.
-    member _.some (suboptions: ComposedChoice<_,_,_> list) = fun yield' acc ->
-        let mutable allSuccess = true
-        let chosen =
-            [   for ix, choice in suboptions |> List.mapiOneBased tuple2 do
-                    let acc = acc |> Choice.Param.appendKey (ix.ToString())
-                    match choice yield' acc with
-                    | Some v -> yield v
-                    | None -> allSuccess <- false
-                ]
-        if allSuccess then chosen |> Some else None
     // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation)
     member _.uplift (choice : ComposedChoice<_,_,'domainType>) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         match choice id acc with
