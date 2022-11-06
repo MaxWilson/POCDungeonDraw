@@ -1,10 +1,16 @@
 ﻿module Lib.Autopicker
 
 module Choice =
-    type 't Param = { recognizer: string -> bool; key: string }
+    type One<'intermediate, 'domainType> =
+        | One of 'intermediate * 'domainType
+        | Zero
+    type Many<'intermediate, 'domainType> =
+        | Some of 'intermediate * 'domainType list
+        | None
+    type 'result Param = { recognizer: string -> bool; key: string }
         with
         member this.recognized() = this.recognizer this.key
-        member this.recognize f = if this.recognized() then f() else None
+        member this.recognize f : 'result option = if this.recognized() then f() else None
         static member create (chosenOptions: string list) = { key = ""; recognizer = fun key -> chosenOptions |> List.exists (fun k -> k.StartsWith key) }
         static member create prob = { key = ""; recognizer = fun _ -> rand.Next 100 <= prob }
         member old.appendKey newValue = { old with key = if old.key.Length = 0 then newValue else old.key + "-" + newValue }
@@ -14,7 +20,7 @@ module Choice =
 // and the runtime order of the stages is choice => yield'.
 // There are options all along the pipeline because choosing could fail to resolve at any stage due to e.g. lack of user input, or because the user picked a different option.
 // Only when everything in the pipeline returns a definite Some [results, which could be empty] is the final choice definitely made.
-type ComposedChoice<'acc, 'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> 'acc Choice.Param -> 'domainType option
+type ComposedChoice<'acc, 'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> Choice.Param -> 'domainType option
 
 type Compose() =
     let pickOne yield' (acc: _ Choice.Param) item : _ option =
