@@ -1,6 +1,14 @@
 ﻿module Lib.Autopicker
 
 module Choice =
+    type MenuItem = { text: string; key: string; submenu: Menu option}
+    and Menu = {
+        header: string
+        items: MenuItem list
+        }
+        with
+        static member placeholder() = { header = "placeholder"; items = [] }
+        static member placeholder (submenus: Menu list) = Menu.placeholder()
     type Chosen<'intermediate, 'domainType> =
         abstract member failed: bool
         abstract member combine: Chosen<'intermediate, 'domainType> * Chosen<'intermediate, 'domainType> -> Chosen<'intermediate, 'domainType>
@@ -17,15 +25,15 @@ module Choice =
 // and the runtime order of the stages is choice => yield'.
 // There are options all along the pipeline because choosing could fail to resolve at any stage due to e.g. lack of user input, or because the user picked a different option.
 // Only when everything in the pipeline returns a definite Some [results, which could be empty] is the final choice definitely made.
-type ComposedChoice<'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> Choice.Param -> Choice.Chosen<'intermediateState, 'domainType>
+type ComposedChoice<'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> Choice.Param -> 'domainType option * Choice.Menu
 
 type Compose() =
-    let pickOne yield' (acc: Choice.Param) item : _ option =
-        if acc.recognized() then
+    let pickOne yield' (acc: Choice.Param) item : _ option * Choice.Menu =
+        (if acc.recognized() then
             yield' (Some item)
-        else None
+        else None), Choice.Menu.placeholder()
     let pickSome yield' (items: _ list) =
-        items |> List.map (Some >> yield')
+        (items |> List.map (Some >> yield')), Choice.Menu.placeholder()
 
     // choose a value directly (or don't and fail, if the user doesn't select it)
     member _.a v : ComposedChoice<_,_> = fun yield' acc -> pickOne yield' (acc.appendKey (v.ToString())) v
@@ -34,14 +42,14 @@ type Compose() =
     // choose directly among values, not among choices
     member this.oneValue (options: _ list) : ComposedChoice<_,_>  = fun yield' acc ->
         let chooseOne (choices : _ list) yield' =
-            let rec recur = function
+            let rec recur menus = function
             | value::rest ->
                 let acc = acc.appendKey (value.ToString())
                 match pickOne yield' acc value with
-                | Some v -> Some v
-                | None -> recur rest
-            | [] -> None
-            choices |> recur
+                | Some v, menu -> Some v, Choice.Menu.placeholder (menu::menus)
+                | None, menu -> recur (menu::menus) rest
+            | [] -> None, Choice.Menu.placeholder menus
+            choices |> recur []
         chooseOne options yield'
     // choose among choices
     member _.oneOf (options: ComposedChoice<_,_> list) : ComposedChoice<_,_> = fun yield' acc ->
@@ -55,7 +63,7 @@ type Compose() =
                 | Some v -> Some v
                 | None -> recur rest
             | [] -> None
-            choices |> recur
+            choices |> recur []
         chooseOne options yield' acc
     // choose among choices
     member _.oneOfWith (label:string) (options: ComposedChoice<_,_> list) : ComposedChoice<_,_> = fun yield' acc ->
