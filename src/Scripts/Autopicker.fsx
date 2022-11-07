@@ -7,6 +7,28 @@ open Lib.Autopicker.Choice
 #load "DungeonFantasy\Chargen.fs"
 open DungeonFantasy.Chargen
 
+let one x = Grant(x) :> Choice<_>
+let maybe x = Allow x :> Choice<_>
+let x = maybe "abc"
+let vals (x:Choice<_>) = x.getValues(Param.create 50)
+vals x
+let y = OneChoice<_,_>.create([maybe "XYZ"; x; one "xyz"])
+let mk x = OneChoice<_,_>.create x
+let some x = SomeChoices<_,_>(None, x, Some)
+mk [maybe "XYZ"; maybe "123"] |> vals
+some [maybe "XYZ"; maybe "123"] |> vals
+let z = SomeChoices(None,[maybe "XYZ"; maybe "123"],fun v -> Some [v])
+vals z
+vals y
+let weapons = OneChoice.create(Enumerate.Weapons |> List.map maybe)
+let single = OneTransform(None, weapons, WeaponOfChoice >> Some)
+let focii = OneChoice(None, [maybe All; maybe Swords; OneTransform(None, weapons, WeaponOfChoice >> Some)], WeaponMaster >> Some)
+let wms = [for _ in 1..200 -> vals focii]
+wms |> List.filter (function Some(WeaponMaster(WeaponOfChoice _)) -> true | _ -> false)
+vals single
+vals (OneChoice<_,_>.create)
+x.ToString()
+
 let sometimes choice = choice id (Choice.Param<_>.create 25)
 let trace (acc:Choice.Param<_>) =
     let trace key =

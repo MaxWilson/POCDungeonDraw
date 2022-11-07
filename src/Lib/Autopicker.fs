@@ -1,7 +1,7 @@
 ﻿module Lib.Autopicker
 
 module Choice =
-    type MenuItem = { text: string; key: string; submenu: Menu option}
+    type MenuItem = { text: string; key: string; isCurrentlySelected: bool; submenu: Menu option }
     and Menu = {
         header: string
         items: MenuItem list
@@ -18,7 +18,63 @@ module Choice =
         member this.recognize f : 'result option = if this.recognized() then f() else None
         static member create (chosenOptions: string list) = { key = ""; recognizer = fun key -> chosenOptions |> List.exists (fun k -> k.StartsWith key) }
         static member create prob = { key = ""; recognizer = fun _ -> rand.Next 100 <= prob }
-        member old.appendKey newValue = { old with key = if old.key.Length = 0 then newValue else old.key + "-" + newValue }
+        member old.appendKey newValue = match newValue with None -> old | Some newValue -> { old with key = if old.key.Length = 0 then newValue else old.key + "-" + newValue }
+    type Choice<'domainType> =
+        abstract member getMenus: Param -> Menu
+        abstract member getValues: Param -> 'domainType option
+    type Grant<'domainType>(value, ?adapter) =
+        interface Choice<'domainType> with
+            member this.getMenus param = Menu.placeholder()
+            member this.getValues param = Some value
+        override _.ToString() = $"Grant: ({typeof<'domainType>.Name} {value})"
+    type Allow<'domainType>(value, ?adapter) =
+        interface Choice<'domainType> with
+            member this.getMenus param = Menu.placeholder()
+            member this.getValues param = if param.recognized() then Some value else None
+        override _.ToString() = $"Allow: ({typeof<'domainType>.Name} {value})"
+    type OneTransform<'domainType, 'childType>(key:string option, child: Choice<'childType>, adapter: 'childType -> 'domainType option) =
+        interface Choice<'domainType> with
+            member this.getMenus param = Menu.placeholder()
+            member this.getValues param =
+                if param.recognized() then
+                    let param = param.appendKey key
+                    child.getValues param |> Option.bind adapter
+                else None
+        override _.ToString() = $"OneChoice: {typeof<'domainType>.Name}"
+        static member create(key, children) = OneTransform(Some key, children, Some)
+        static member create(children) = OneTransform(None, children, Some)
+    type OneChoice<'domainType, 'childType>(key:string option, children: Choice<'childType> list, adapter: 'childType -> 'domainType option) =
+        interface Choice<'domainType> with
+            member this.getMenus param = Menu.placeholder()
+            member this.getValues param =
+                if param.recognized() then
+                    let param = param.appendKey key
+                    let rec recur = function
+                        | [] -> None
+                        | (h: 'childType Choice)::t ->
+                            h.getValues param |> Option.bind adapter |> Option.orElseWith (fun () -> recur t)
+                    recur children
+                else None
+        override _.ToString() = $"OneChoice: {typeof<'domainType>.Name}"
+        static member create(key, children) = OneChoice(Some key, children, Some)
+        static member create(children) = OneChoice(None, children, Some)
+    type SomeChoices<'domainType, 'childType>(key:string option, children: Choice<'childType> list, adapter: 'childType -> 'domainType option) =
+        interface Choice<'domainType list> with
+            member this.getMenus param = Menu.placeholder()
+            member this.getValues param : 'domainType list option =
+                if param.recognized() then
+                    let param = param.appendKey key
+                    let rec recur soFar = function
+                        | [] -> soFar
+                        | (h: 'childType Choice)::t ->
+                            match h.getValues param |> Option.bind adapter with
+                            | Some v -> recur (soFar@[v]) t
+                            | None -> recur soFar t
+                    recur [] children |> Some
+                else None
+        override _.ToString() = $"OneChoice: {typeof<'domainType>.Name}"
+        static member create(key, children) = OneChoice(Some key, children, Some)
+        static member create(children) = OneChoice(None, children, Some)
 
 // in order of actual runtime order the values go acc => intermediate => domainType
 // therefore the type is yield' -> acc -> domainType option
