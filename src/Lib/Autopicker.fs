@@ -1,13 +1,10 @@
 ﻿module Lib.Autopicker
 
 module Choice =
-    type One<'intermediate, 'domainType> =
-        | One of 'intermediate * 'domainType
-        | Zero
-    type Many<'intermediate, 'domainType> =
-        | Some of 'intermediate * 'domainType list
-        | None
-    type 'result Param = { recognizer: string -> bool; key: string }
+    type Chosen<'intermediate, 'domainType> =
+        abstract member failed: bool
+        abstract member combine: Chosen<'intermediate, 'domainType> * Chosen<'intermediate, 'domainType> -> Chosen<'intermediate, 'domainType>
+    type Param = { recognizer: string -> bool; key: string }
         with
         member this.recognized() = this.recognizer this.key
         member this.recognize f : 'result option = if this.recognized() then f() else None
@@ -20,10 +17,10 @@ module Choice =
 // and the runtime order of the stages is choice => yield'.
 // There are options all along the pipeline because choosing could fail to resolve at any stage due to e.g. lack of user input, or because the user picked a different option.
 // Only when everything in the pipeline returns a definite Some [results, which could be empty] is the final choice definitely made.
-type ComposedChoice<'acc, 'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> Choice.Param -> 'domainType option
+type ComposedChoice<'intermediateState, 'domainType> = ('intermediateState option -> 'domainType option) -> Choice.Param -> Choice.Chosen<'intermediateState, 'domainType>
 
 type Compose() =
-    let pickOne yield' (acc: _ Choice.Param) item : _ option =
+    let pickOne yield' (acc: Choice.Param) item : _ option =
         if acc.recognized() then
             yield' (Some item)
         else None
@@ -31,11 +28,11 @@ type Compose() =
         items |> List.map (Some >> yield')
 
     // choose a value directly (or don't and fail, if the user doesn't select it)
-    member _.a v : ComposedChoice<_,_,_> = fun yield' acc -> pickOne yield' (acc.appendKey (v.ToString())) v
+    member _.a v : ComposedChoice<_,_> = fun yield' acc -> pickOne yield' (acc.appendKey (v.ToString())) v
     // labelled overload of choose.a
-    member _.a(label, v) : ComposedChoice<_,_,_> = fun yield' acc -> pickOne yield' (acc.appendKey label) v
+    member _.a(label, v) : ComposedChoice<_,_> = fun yield' acc -> pickOne yield' (acc.appendKey label) v
     // choose directly among values, not among choices
-    member this.oneValue (options: _ list) : ComposedChoice<_,_,_>  = fun yield' acc ->
+    member this.oneValue (options: _ list) : ComposedChoice<_,_>  = fun yield' acc ->
         let chooseOne (choices : _ list) yield' =
             let rec recur = function
             | value::rest ->
@@ -47,8 +44,8 @@ type Compose() =
             choices |> recur
         chooseOne options yield'
     // choose among choices
-    member _.oneOf (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
-        let chooseOne (choices : ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
+    member _.oneOf (options: ComposedChoice<_,_> list) : ComposedChoice<_,_> = fun yield' acc ->
+        let chooseOne (choices : ComposedChoice<_,_> list) : ComposedChoice<_,_> = fun yield' acc ->
             let rec recur = function
             | choice::rest ->
                 let yield0 = function
@@ -61,9 +58,9 @@ type Compose() =
             choices |> recur
         chooseOne options yield' acc
     // choose among choices
-    member _.oneOfWith (label:string) (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
+    member _.oneOfWith (label:string) (options: ComposedChoice<_,_> list) : ComposedChoice<_,_> = fun yield' acc ->
         let acc = acc.appendKey label
-        let chooseOne (choices : ComposedChoice<_,_,_> list) : ComposedChoice<_,_,_> = fun yield' acc ->
+        let chooseOne (choices : ComposedChoice<_,_> list) : ComposedChoice<_,_> = fun yield' acc ->
             let rec recur = function
             | choice::rest ->
                 let yield0 = function
@@ -96,7 +93,7 @@ type Compose() =
             | None -> Some []
             )
     // a choice that returns the sum of everything its subchoices return
-    member _.aggregate (options: ComposedChoice<_,_,_> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
+    member _.aggregate (options: ComposedChoice<_,_> list) : ComposedChoice<_,_,'domainType list> = fun yield' acc ->
         let mutable allSucceed = true
         let chosen = [
             for choice in options do
