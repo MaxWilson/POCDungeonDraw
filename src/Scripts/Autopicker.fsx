@@ -60,30 +60,35 @@ traits() |> pick ["WeaponMaster-Single-Rapier"]
 
 // POC for lookup by flats or partial flags
 let traits1 = [Advantage(WeaponMaster(TwoWeapon(Rapier, Shield))); Advantage(DangerSense); Increase(ST)]
+let traits2 = [Advantage(WeaponMaster(All)); Advantage(DangerSense); Increase(ST)]
 
-let inline recur (prefix:string) f x (newEntry:string) =
-    if prefix <> "" then
-        prefix::(f x (prefix+newEntry))
-    else
-        (f x (prefix+newEntry))
 module Flatten =
-    let inline flatten (x: 't) prefix = [prefix + x.ToString()]
+    let combine (prefix:string) (newEntry: string) =
+        if prefix = "" then newEntry else prefix + "-" + newEntry
+    let inline recur (prefix:string) f x (newEntry:string) =
+        if prefix <> "" then
+            prefix::(f x (combine prefix newEntry))
+        else
+            (f x (combine prefix newEntry))
+    let inline flatten (x: 't) prefix = [combine prefix (x.ToString())]
     let flattenFocus (x:WeaponMasterFocus) prefix =
-        let recur2 x1 x2 name = prefix::(flatten x1 (prefix+name) @ flatten x2 (prefix+name))
+        let recur2 x1 x2 name = prefix::(flatten x1 (combine prefix name) @ flatten x2 (combine prefix name))
         match x with
         | TwoWeapon(w1, w2) -> nameof(TwoWeapon) |> recur2 w1 w2
         | WeaponOfChoice x -> nameof(WeaponOfChoice) |> recur prefix flatten x
-        | x -> [x.ToString()]
+        | x -> [combine prefix (x.ToString())]
     let flattenAdvantage (x:Advantage) prefix =
         match x with
-        | WeaponMaster x -> nameof(WeaponMaster) |> recur prefix flattenFocus x
-        | x -> [prefix + x.ToString()]
+        | WeaponMaster x -> "Weapon Master" |> recur prefix flattenFocus x
+        | DangerSense -> [combine prefix "Danger Sense"]
+        | x -> [combine prefix (x.ToString())]
     let flattenTrait (x:Trait) prefix =
         match x with
-        | Advantage x -> nameof(Advantage) |> recur prefix flattenAdvantage x
+        | Advantage x -> recur prefix flattenAdvantage x "" // do NOT include "Advantage" in the output
         | Increase x -> nameof(Increase) |> recur prefix flatten x
-        | x -> [x.ToString()]
-let checkTrait myTraits (traitTag:string)= myTraits |> Set.contains traitTag
-let myTraits = traits1 |> List.collect (flip Flatten.flattenTrait "") |> Set.ofList
-checkTrait myTraits "AdvantageWeaponMaster"
+        | x -> [combine prefix (x.ToString())]
+let checkTrait myTraits (traitTag:string) = myTraits |> Set.contains traitTag
+let compile traits = traits |> List.collect (flip Flatten.flattenTrait "") |> Set.ofList
+checkTrait (compile traits1) "Weapon Master"
+checkTrait (compile traits2) "Weapon Master-All"
 
