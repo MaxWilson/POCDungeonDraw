@@ -61,28 +61,29 @@ traits() |> pick ["WeaponMaster-Single-Rapier"]
 // POC for lookup by flats or partial flags
 let traits1 = [Advantage(WeaponMaster(TwoWeapon(Rapier, Shield))); Advantage(DangerSense); Increase(ST)]
 
-let inline recur (prefix:string) (newEntry:string) f x =
-    prefix::(f x (prefix+newEntry))
-type Flattener() =
-    member this.flatten x = fun prefix ->
-        let inline recur x name = prefix::(this.flatten x (prefix+name))
+let inline recur (prefix:string) f x (newEntry:string) =
+    if prefix <> "" then
+        prefix::(f x (prefix+newEntry))
+    else
+        (f x (prefix+newEntry))
+module Flatten =
+    let inline flatten (x: 't) prefix = [prefix + x.ToString()]
+    let flattenFocus (x:WeaponMasterFocus) prefix =
+        let recur2 x1 x2 name = prefix::(flatten x1 (prefix+name) @ flatten x2 (prefix+name))
         match x with
-        | Advantage x -> nameof(Advantage) |> recur
-        | Increase x -> nameof(Increase) |> recur
+        | TwoWeapon(w1, w2) -> nameof(TwoWeapon) |> recur2 w1 w2
+        | WeaponOfChoice x -> nameof(WeaponOfChoice) |> recur prefix flatten x
         | x -> [x.ToString()]
-    member this.flatten x = fun prefix ->
-        let recur x name = prefix::(this.flatten x (prefix+name))
+    let flattenAdvantage (x:Advantage) prefix =
         match x with
-        | WeaponMaster x -> nameof(WeaponMaster) |> recur
-        | x -> [x.ToString()]
-    member this.flatten (x:WeaponMasterFocus) = fun prefix ->
-        let recur2 x1 x2 name = prefix::(this.flatten x1 (prefix+name) @ this.flatten x2 (prefix+name))
-        let recur name = prefix::(this.flatten x (prefix+name))
+        | WeaponMaster x -> nameof(WeaponMaster) |> recur prefix flattenFocus x
+        | x -> [prefix + x.ToString()]
+    let flattenTrait (x:Trait) prefix =
         match x with
-        | TwoWeapon(w1, w2) -> nameof(TwoWeapon) |> recur2
-        | WeaponOfChoice x -> nameof(WeaponOfChoice)::(this.flatten x)
+        | Advantage x -> nameof(Advantage) |> recur prefix flattenAdvantage x
+        | Increase x -> nameof(Increase) |> recur prefix flatten x
         | x -> [x.ToString()]
-    member this.flatten (x:Weapon) = [x.ToString()]
-    member this.flatten (x:Ability) = [x.ToString()]
-let flatten = Flattener()
-traits1 |> List.map (flatten.flatten "")
+let checkTrait myTraits (traitTag:string)= myTraits |> Set.contains traitTag
+let myTraits = traits1 |> List.collect (flip Flatten.flattenTrait "") |> Set.ofList
+checkTrait myTraits "AdvantageWeaponMaster"
+
