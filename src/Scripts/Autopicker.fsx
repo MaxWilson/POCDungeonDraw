@@ -57,3 +57,32 @@ traits() |> pick [
     ]
 
 traits() |> pick ["WeaponMaster-Single-Rapier"]
+
+// POC for lookup by flats or partial flags
+let traits1 = [Advantage(WeaponMaster(TwoWeapon(Rapier, Shield))); Advantage(DangerSense); Increase(ST)]
+
+let inline recur (prefix:string) (newEntry:string) f x =
+    prefix::(f x (prefix+newEntry))
+type Flattener() =
+    member this.flatten x = fun prefix ->
+        let inline recur x name = prefix::(this.flatten x (prefix+name))
+        match x with
+        | Advantage x -> nameof(Advantage) |> recur
+        | Increase x -> nameof(Increase) |> recur
+        | x -> [x.ToString()]
+    member this.flatten x = fun prefix ->
+        let recur x name = prefix::(this.flatten x (prefix+name))
+        match x with
+        | WeaponMaster x -> nameof(WeaponMaster) |> recur
+        | x -> [x.ToString()]
+    member this.flatten (x:WeaponMasterFocus) = fun prefix ->
+        let recur2 x1 x2 name = prefix::(this.flatten x1 (prefix+name) @ this.flatten x2 (prefix+name))
+        let recur name = prefix::(this.flatten x (prefix+name))
+        match x with
+        | TwoWeapon(w1, w2) -> nameof(TwoWeapon) |> recur2
+        | WeaponOfChoice x -> nameof(WeaponOfChoice)::(this.flatten x)
+        | x -> [x.ToString()]
+    member this.flatten (x:Weapon) = [x.ToString()]
+    member this.flatten (x:Ability) = [x.ToString()]
+let flatten = Flattener()
+traits1 |> List.map (flatten.flatten "")
