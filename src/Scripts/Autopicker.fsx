@@ -58,37 +58,43 @@ traits() |> pick [
 
 traits() |> pick ["WeaponMaster-Single-Rapier"]
 
-// POC for lookup by flats or partial flags
-let traits1 = [Advantage(WeaponMaster(TwoWeapon(Rapier, Shield))); Advantage(DangerSense); Increase(ST)]
-let traits2 = [Advantage(WeaponMaster(All)); Advantage(DangerSense); Increase(ST)]
+module QueryStore =
+    type d<'t when 't:comparison> =
+        { keyed: Map<string, 't>; values: Set<'t> }
+        with
+        member this.check(v) =
+            this.values.Contains v
+        member this.check(key, predicate) =
+            match this.keyed |> Map.tryFind key with
+            | Some v -> predicate v
+            | None -> false
+    let create (values, f) =
+        let keyed = [
+            for v in values do
+                match f v with
+                | Some (key:string) -> key, v
+                | None -> ()
+            ]
+        { keyed = keyed |> Map.ofList; values = values |> Set.ofSeq }
 
-module Flatten =
-    let combine (prefix:string) (newEntry: string) =
-        if prefix = "" then newEntry else prefix + "-" + newEntry
-    let inline recur (prefix:string) f x (newEntry:string) =
-        if prefix <> "" then
-            prefix::(f x (combine prefix newEntry))
-        else
-            (f x (combine prefix newEntry))
-    let inline flatten (x: 't) prefix = [combine prefix (x.ToString())]
-    let flattenFocus (x:WeaponMasterFocus) prefix =
-        let recur2 x1 x2 name = prefix::(flatten x1 (combine prefix name) @ flatten x2 (combine prefix name))
-        match x with
-        | TwoWeapon(w1, w2) -> nameof(TwoWeapon) |> recur2 w1 w2
-        | WeaponOfChoice x -> nameof(WeaponOfChoice) |> recur prefix flatten x
-        | x -> [combine prefix (x.ToString())]
-    let flattenAdvantage (x:Advantage) prefix =
-        match x with
-        | WeaponMaster x -> "Weapon Master" |> recur prefix flattenFocus x
-        | DangerSense -> [combine prefix "Danger Sense"]
-        | x -> [combine prefix (x.ToString())]
-    let flattenTrait (x:Trait) prefix =
-        match x with
-        | Advantage x -> recur prefix flattenAdvantage x "" // do NOT include "Advantage" in the output
-        | Increase x -> nameof(Increase) |> recur prefix flatten x
-        | x -> [combine prefix (x.ToString())]
-let checkTrait myTraits (traitTag:string) = myTraits |> Set.contains traitTag
-let compile traits = traits |> List.collect (flip Flatten.flattenTrait "") |> Set.ofList
-checkTrait (compile traits1) "Weapon Master"
-checkTrait (compile traits2) "Weapon Master-All"
+let extractWeaponMasterOnly = function WeaponMaster _ -> nameof(WeaponMaster) |> Some | _ -> None
+let weaponMasterOf weapon = function
+    | WeaponMaster focus ->
+        match focus, weapon with
+        | All, _ -> true
+        | Swords, (Rapier | Longsword) -> true
+        | WeaponOfChoice(w), _
+        | TwoWeapon(w,_), _
+        | TwoWeapon(_, w),_ when w = weapon -> true
+        | _ -> false
+    | _ -> false
 
+let q args = QueryStore.create(args, extractWeaponMasterOnly).check(nameof(WeaponMaster), weaponMasterOf Rapier)
+q [WeaponMaster(TwoWeapon(Rapier,Shield)); DangerSense] = true
+q [WeaponMaster(TwoWeapon(Shield,Rapier)); DangerSense] = true
+q [WeaponMaster(All); DangerSense] = true
+q [WeaponMaster(Swords); DangerSense] = true
+q [WeaponMaster(WeaponOfChoice Shield); DangerSense] = false
+q [DangerSense] = false
+q [] = false
+q [WeaponMaster(WeaponOfChoice Rapier)] = true
