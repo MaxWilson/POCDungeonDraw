@@ -9,5 +9,7 @@ packages
 .fake
 paket-files
 .vs
+.*
 publish
 *.exe
+!.gitignore
