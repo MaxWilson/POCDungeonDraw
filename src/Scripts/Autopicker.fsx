@@ -59,7 +59,7 @@ traits() |> pick [
 traits() |> pick ["WeaponMaster-Single-Rapier"]
 
 module QueryStore =
-    type d<'t when 't:comparison> =
+    type QueryStore<'t when 't:comparison> =
         { keyed: Map<string, 't>; values: Set<'t> }
         with
         member this.check(v) =
