@@ -7,27 +7,6 @@ open Lib.Autopicker.Choice
 #load "DungeonFantasy\Chargen.fs"
 open DungeonFantasy.Chargen
 
-let one x = Grant(None, x) :> Choice<_>
-let maybe x = Allow(None, x) :> Choice<_>
-let x = maybe "abc"
-let vals (x:Choice<_>) = x.getValues(Param.create 50)
-vals x
-let y = choose.oneOf([maybe "XYZ"; x; one "xyz"])
-let mk x = choose.oneOf x
-let some xs = SomeChoices(None, xs, function Some vs -> Some [vs] | _ -> Some [])
-mk [maybe "XYZ"; maybe "123"] |> vals
-some [maybe "XYZ"; maybe "123"] |> vals
-let z = SomeChoices(None,[maybe "XYZ"; maybe "123"],fun v -> Some [v])
-vals z
-vals y
-let weapons = choose.oneValue(Enumerate.Weapons)
-let single = choose.oneValue(WeaponOfChoice, Enumerate.Weapons)
-let focii = ChoiceCtor(None, [maybe All; maybe Swords; single], WeaponMaster)
-let wms = [for _ in 1..200 -> vals focii]
-wms |> List.filter (function Some(WeaponMaster(WeaponOfChoice _)) -> true | _ -> false)
-vals single
-x.ToString()
-
 let sometimes (choice: _ Choice) = choice.getValues (Param.create 25)
 let trace (acc:Param) =
     let trace key =
@@ -37,11 +16,31 @@ let trace (acc:Param) =
         v
     { acc with recognizer = trace }
 let pick (indices: string list) (choice: _ Choice) = choice.getValues(Param.create indices |> trace)
+let menu (indices: string list) (choice: _ Choice) =
+    let rec prettyprint indentLevel (menuItems:MenuItem list) =
+        for item in menuItems do
+            let indent = String.replicate indentLevel " "
+            let selectionBullet = if item.isCurrentlySelected then "*" else " "
+            match item.submenu with
+            | Some sub ->
+                printfn $"{indent}{selectionBullet}{item.text}:"
+                prettyprint (indentLevel+1) sub.items
+            | None -> printfn $"{indent}{selectionBullet}{item.text}"
+    choice.getMenus(Param.create indices |> trace)
+    |> prettyprint 0
 sometimes (traits())
 traits() |> pick [
     "Profession-Swashbuckler"
     "WeaponMaster-Single-Rapier"
     "Magery-0"
+    ]
+traits() |> menu [
+    "Profession-Swashbuckler"
+    "WeaponMaster-Single-Rapier"
+    "Magery-0"
+    ]
+
+weaponMaster id |> menu [
     ]
 
 printfn "~~~~~~~~~~~~~~"
