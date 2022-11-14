@@ -23,12 +23,10 @@ module Choice =
         interface Choice<'domainType> with
             member this.getMenus param = Menu.placeholder()
             member this.getValues param = Some value
-        override _.ToString() = $"Grant {key}: ({typeof<'domainType>.Name} {value})"
     type Allow<'domainType>(key:string option, value) =
         interface Choice<'domainType> with
             member this.getMenus param = Menu.placeholder()
             member this.getValues param = if (param.appendKey (key |> function None -> value.ToString() |> Some | _ -> key)).recognized() then Some value else None
-        override _.ToString() = $"Allow {key}: ({typeof<'domainType>.Name} {value})"
     type OneTransform<'childType, 'domainType>(key:string option, child: Choice<'childType>, adapter: 'childType option -> 'domainType option) =
         interface Choice<'domainType> with
             member this.getMenus param = Menu.placeholder()
@@ -37,7 +35,6 @@ module Choice =
                     let param = param.appendKey key
                     child.getValues param |> adapter
                 else None
-        override _.ToString() = $"OneTransform: {typeof<'domainType>.Name}"
     type ChoiceCtor2<'child1Type, 'child2Type, 'domainType>(key:string option, child1: Choice<'child1Type>, child2: Choice<'child2Type>, adapter) =
         interface Choice<'domainType> with
             member this.getMenus param = Menu.placeholder()
@@ -48,7 +45,6 @@ module Choice =
                     | Some v1, Some v2 -> adapter(v1, v2) |> Some
                     | _ -> None
                 else None
-        override _.ToString() = $"ChoiceCtor2: {typeof<'domainType>.Name}"
     type ChoiceCtor<'childType, 'domainType>(key:string option, children: Choice<'childType> list, adapt) =
         interface Choice<'domainType> with
             member this.getMenus param = Menu.placeholder()
@@ -64,7 +60,6 @@ module Choice =
                                 recur t
                     recur children
                 else None
-        override _.ToString() = $"ChoiceCtor: {typeof<'domainType>.Name}"
     type SomeChoices<'childType, 'domainType>(key:string option, children: Choice<'childType> list, adapter: 'childType option -> 'domainType list option) =
         interface Choice<'domainType list> with
             member this.getMenus param = Menu.placeholder()
@@ -79,7 +74,6 @@ module Choice =
                             | None -> recur soFar t
                     recur [] children |> Some
                 else None
-        override _.ToString() = $"SomeChoices: {typeof<'domainType>.Name}"
 
 open Choice
 type ComposedChoice<'domainType> = Choice<'domainType>
