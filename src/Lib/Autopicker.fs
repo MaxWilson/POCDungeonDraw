@@ -29,9 +29,7 @@ module Choice =
         interface Choice<'domainType> with
             member this.getMenus param =
                 let param = param.appendKey key
-                if param.recognized() then
-                    child.getMenus param
-                else []
+                child.getMenus param
             member this.getValues param =
                 let param = param.appendKey key
                 if param.recognized() then
@@ -42,8 +40,12 @@ module Choice =
             member this.getMenus param =
                 let param = param.appendKey key
                 if param.recognized() then
-                    child1.getMenus (param.appendKey key) @ (child2.getMenus (param.appendKey key))
-                else []
+                    let menu = {
+                        header = "Ctor2"
+                        items = child1.getMenus param @ (child2.getMenus param)
+                        }
+                    [{ text = key |> Option.defaultValue "Untitled"; key = param.key; isCurrentlySelected = false; submenu = Some menu }]
+                else [{ text = key |> Option.defaultValue "Untitled"; key = param.key; isCurrentlySelected = false; submenu = None }]
             member this.getValues param =
                 let param = param.appendKey key
                 if param.recognized() then
@@ -55,9 +57,7 @@ module Choice =
         interface Choice<'domainType> with
             member this.getMenus param =
                 let param = param.appendKey key
-                if param.recognized() then
-                    children |> List.collect (fun child -> child.getMenus(param.appendKey key))
-                else []
+                children |> List.collect (fun child -> child.getMenus(param.appendKey key))
             member this.getValues param =
                 let param = param.appendKey key
                 if param.recognized() then

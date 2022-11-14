@@ -28,6 +28,10 @@ let menu (indices: string list) (choice: _ Choice) =
             | None -> printfn $"{indent}{selectionBullet}{item.text}"
     choice.getMenus(Param.create indices |> trace)
     |> prettyprint 0
+weaponMaster id |> menu [
+    ]
+
+
 sometimes (traits())
 traits() |> pick [
     "Profession-Swashbuckler"
@@ -40,8 +44,6 @@ traits() |> menu [
     "Magery-0"
     ]
 
-weaponMaster id |> menu [
-    ]
 
 printfn "~~~~~~~~~~~~~~"
 
