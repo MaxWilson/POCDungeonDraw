@@ -85,59 +85,135 @@ module Choice =
                             | None -> recur soFar t
                     recur [] children |> Some
                 else None
+    type ConditionalChoice<'childType, 'domainType when 'childType: equality>(key: string option, child: 'childType Choice, childAdapter, conditionals: ('childType * 'domainType list Choice) list) =
+        interface Choice<'domainType list> with
+            member this.getMenus param =
+                if param.recognized() then
+                    let param = param.appendKey key
+                    child.getMenus param @ (notImpl())
+                else []
+            member this.getValues param =
+                let param = param.appendKey key
+                if param.recognized() then
+                    match child.getValues param with
+                    | None -> None
+                    | Some v ->
+                        [   yield childAdapter v
+                            for v1, child in conditionals do
+                                if v1 = v then
+                                    match child.getValues param with
+                                    | Some v -> yield! v
+                                    | None -> ()
+                            ] |> Some
+                else None
+    type ChooseUntil<'childType, 'domainType>(key:string option, children: Choice<'childType> list, adapter: 'childType option -> 'domainType list option, validator) =
+        interface Choice<'domainType list> with
+            member this.getMenus param =
+                children |> List.collect (fun child -> child.getMenus(param.appendKey key))
+            member this.getValues param : 'domainType list option =
+                if param.recognized() then
+                    let param = param.appendKey key
+                    let rec recur soFar = function
+                        | [] -> soFar
+                        | (h: 'childType Choice)::t ->
+                            match h.getValues param |> adapter with
+                            | Some vs when validator(soFar@vs) -> recur (soFar@vs) t
+                            | _ -> recur soFar t
+                    recur [] children |> Some
+                else None
+    type ChooseAtLeastUntil2D<'childType, 'domainType>(key:string option, children: Choice<'childType> list list, adapter: 'childType option -> 'domainType option, validator) =
+        interface Choice<'domainType list> with
+            member this.getMenus param =
+                children |> List.collect (List.collect (fun child -> child.getMenus(param.appendKey key)))
+            member this.getValues param : 'domainType list option =
+                if param.recognized() then
+                    let param = param.appendKey key
+                    let mutable isValid = true
+                    let mutable results = []
+                    let rec recur soFar = function
+                        | [] -> soFar
+                        | (h: 'childType Choice)::t ->
+                            match h.getValues param |> adapter with
+                            | Some vs ->
+                                if validator(results, soFar@[vs]) |> not then isValid <- false
+                                recur (soFar@[vs]) t
+                            | _ -> recur soFar t
+                    for children in children do
+                        results <- recur [] children::results
+                    if isValid then
+                        Some (results |> List.rev |> List.collect id)
+                    else None
+                else None
 
 open Choice
-type ComposedChoice<'domainType> = Choice<'domainType>
 
 type Compose() =
     // choose a value directly (or don't and fail, if the user doesn't select it)
-    member _.grant v : ComposedChoice<_> = Grant(None, v)
-    member _.a v : ComposedChoice<_> = Allow(None, v)
+    member _.grant v : _ Choice = Grant(None, v)
+    member _.a v : _ Choice = Allow(None, v)
     // labelled overload of choose.a
-    member _.a(label, v) = Allow(Some label, v)
+    member _.a(label, v) : _ Choice = Allow(Some label, v)
     // choose directly among values, not among choices
-    member this.oneValue (options: _ list) = ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), id)
+    member this.oneValue (options: _ list) : _ Choice = ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), id)
     // choose directly among values, not among choices
-    member this.oneValue (adapt, options: _ list) = ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), adapt)
+    member this.oneValue (adapt, options: _ list) : _ Choice = ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), adapt)
     // choose directly among values, not among choices
-    member this.oneValueWith (label, options: _ list) = ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), id)
+    member this.oneValueWith (label, options: _ list) : _ Choice = ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), id)
     // choose directly among values, not among choices
-    member this.oneValueWith (label, adapter, options: _ list) = ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), adapter)
+    member this.oneValueWith (label, adapter, options: _ list) : _ Choice = ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), adapter)
     // choose among choices
-    member _.oneOf (options: ComposedChoice<_> list) = ChoiceCtor(None, options, id)
+    member _.oneOf (options: _ Choice list) : _ Choice = ChoiceCtor(None, options, id)
     // choose among choices
-    member _.oneOfWith (label:string) (options: ComposedChoice<_> list) = ChoiceCtor(Some label, options, id)
+    member _.oneOfWith (label:string) (options: _ Choice list) : _ Choice = ChoiceCtor(Some label, options, id)
     // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation) or failure
-    member _.mandatory (choice : ComposedChoice<'domainType>) =
+    member _.mandatory (choice : _ Choice) : _ Choice =
         OneTransform(None, choice,
             function
             | Some v -> (Some [v])
             | None -> None)
         :> _ Choice
     // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation)
-    member _.optional (choice : ComposedChoice<'domainType>) : ComposedChoice<'domainType list> =
+    member _.optional (choice : _ Choice) : _ Choice =
         OneTransform(None, choice, function
             | Some v -> (Some [v])
             | None -> Some []
             )
         :> _ Choice
     // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation)
-    member _.optionalWith (label:string) (choice : ComposedChoice<'domainType>) : ComposedChoice<'domainType list> =
+    member _.optionalWith (label:string) (choice : _ Choice) : _ Choice =
         OneTransform(Some label, choice, function
             | Some v -> (Some [v])
             | None -> Some []
             )
         :> _ Choice
     // a choice that returns the sum of everything its subchoices return
-    member _.aggregate (options: ComposedChoice<_> list) : ComposedChoice<'domainType list> =
+    member _.aggregate (options: _ Choice list) : _ Choice =
         SomeChoices(None, options, id)
-    member _.ctor ctor choice: ComposedChoice<'domainType> =
+    // a choice that returns the sum of everything its subchoices return
+    member _.aggregateWith label (options: _ Choice list) : _ Choice =
+        SomeChoices(Some label, options, id)
+    member _.ctor ctor choice: _ Choice =
         ChoiceCtor(None, choice, ctor)
-    member _.ctorWith (label:string) ctor choice: ComposedChoice<'domainType> =
+    member _.ctorWith (label:string) ctor choice: _ Choice =
         ChoiceCtor(Some label, choice, ctor)
-    member _.ctor2 (ctor: _ -> 'constructedType) choice1 choice2 =
+    member _.ctor2 (ctor: _ -> 'constructedType) choice1 choice2 : _ Choice =
         ChoiceCtor2(None, choice1, choice2, ctor)
-    member _.ctor2With label (ctor: _ -> 'constructedType) choice1 choice2 =
+    member _.ctor2With label (ctor: _ -> 'constructedType) choice1 choice2 : _ Choice =
         ChoiceCtor2(Some label, choice1, choice2, ctor)
+    member _.conditional expression childAdapter switches : _ Choice = ConditionalChoice(None, expression, childAdapter, switches)
+    member _.until validator choices : _ Choice = ChooseUntil(None, choices, id, validator)
+    member this.upToBudget (budget:int) costFunc choices : _ Choice =
+        ChooseUntil(None, choices |> List.map this.optional, id, fun choices -> (choices |> List.sumBy costFunc) <= budget)
+    member this.upToBudget2 (budget:int) costFunc listChoices choices : _ Choice =
+        ChooseUntil(None, listChoices @ (choices |> List.map this.optional), id, fun choices -> (choices |> List.sumBy costFunc) <= budget)
+    member _.disadvantagesWithPrioritizedBudget costFunc (budgetsAndChoices: (int * _ Choice list) list) : _ Choice =
+        let choices = budgetsAndChoices |> List.map snd
+        let budgets = budgetsAndChoices |> List.map fst
+        let jointCost (priorChoices: _ list, choices) =
+            let budget = budgets |> List.take (priorChoices.Length + 1) |> List.sum
+            let priorCost = (priorChoices |> List.sumBy (List.sumBy costFunc))
+            let cost = (choices |> List.sumBy costFunc)
+            -(priorCost + cost) >= -budget // We want to ask the user to keep choosing at least until the disadvantage budget requirement is satisfied.
+        ChooseAtLeastUntil2D(None, choices, id, jointCost)
 
 let choose = Compose()

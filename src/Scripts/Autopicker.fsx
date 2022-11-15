@@ -31,6 +31,22 @@ let menu (indices: string list) (choice: _ Choice) =
 weaponMaster id |> menu [
     ]
 
+let traits() =
+    choose.aggregate [
+        choose.mandatory (choose.oneValueWith("Profession", Profession, Enumerate.Professions))
+        choose.optional (choose.oneValueWith("Adv", Advantage, [DangerSense; PeripheralVision; HeroicArcher; Magery 6]))
+        choose.aggregate [
+            for a in Enumerate.PrimaryAbilities do
+                (choose.optional (choose.a (Increase(a,1))))
+            for adv in [DangerSense; PeripheralVision; HeroicArcher] do
+                (choose.optional (choose.a (Advantage adv)))
+            choose.optionalWith "WeaponMaster" (weaponMaster Advantage)
+            choose.optionalWith "Magery" (choose.oneOf [
+                for m in 0..6 do
+                    yield (choose.a (m.ToString(), Advantage (Magery m)))
+                ])
+            ]
+        ]
 
 sometimes (traits())
 traits() |> pick [
