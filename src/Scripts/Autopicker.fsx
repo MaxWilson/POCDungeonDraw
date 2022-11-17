@@ -114,3 +114,25 @@ q [WeaponMaster(WeaponOfChoice Shield); DangerSense] = false
 q [DangerSense] = false
 q [] = false
 q [WeaponMaster(WeaponOfChoice Rapier)] = true
+
+type AverageOps<'T when 'T: (static member (+): 'T * 'T -> 'T)
+    and  'T: (static member DivideByInt : 'T*int -> 'T)
+    and  'T: (static member Zero : 'T)> = 'T
+let inline average<'T when AverageOps<'T>>(xs: 'T array) =
+    let mutable sum = 'T.Zero
+    for x in xs do
+        sum <- sum + x
+    'T.DivideByInt(sum, xs.Length)
+average [|2.2;3.3;4.5;9.9|]
+average [|1.;5.;7.|]
+
+// demonstrate new F# 7.0 features: easier SRTPs. Could be useful to us maybe.
+type MyClass<'t when 't: (member Length: int) and 't: (member plus: int -> 't)> = 't
+type Int(x:int) =
+    member _.plus rhs = x + rhs |> Int
+    member _.Length = x
+let inline foo<'T when MyClass<'T>>(lst:'T list) =
+    lst |> List.sumBy (fun item -> item.Length)
+let inline bar<'T when MyClass<'T>>(lst:'T list) =
+    lst |> List.map(fun i -> (i.plus 7).Length)
+[2;3;4] |> List.map Int |> bar
