@@ -1,11 +1,12 @@
 ﻿module Lib.Autopicker
 
 module Choice =
-    type MenuItem = { text: string; key: string; isCurrentlySelected: bool; submenu: Menu option }
-    and Menu = {
-        header: string
-        items: MenuItem list
-        }
+    type SelectionState = { isSelected: bool; key: string }
+    type Selection =
+        | Grant of description: string
+        | Option of description: string * state: SelectionState
+        | InputRequest of description: string * state: SelectionState
+        | Submenu of description: string * state: SelectionState * header: string * items: Selection list
     type Param = { recognizer: string -> bool; key: string }
         with
         member this.recognized() = this.recognizer this.key
@@ -14,7 +15,7 @@ module Choice =
         static member create prob = { key = ""; recognizer = fun _ -> rand.Next 100 <= prob }
         member old.appendKey newValue = match newValue with None -> old | Some newValue -> { old with key = if old.key.Length = 0 then newValue else old.key + "-" + newValue }
     type Choice<'domainType> = // it's okay for childtype to go unused, e.g. by Grant, but it constrains the allowed children
-        abstract member getMenus: Param -> MenuItem list
+        abstract member getMenus: Param -> Selection list
         abstract member getValues: Param -> 'domainType option
     type Grant<'domainType>(key:string option, value) =
         interface Choice<'domainType> with
