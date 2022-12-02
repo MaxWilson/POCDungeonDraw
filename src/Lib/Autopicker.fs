@@ -5,8 +5,8 @@ module Choice =
     type Selection =
         | Grant of description: string
         | Option of description: string * state: SelectionState
-        | InputRequest of description: string * state: SelectionState
-        | Submenu of description: string * state: SelectionState * header: string * items: Selection list
+        | Submenu of description: string * state: SelectionState * items: Selection list
+        | Decorator of description: string * inner: Selection
     type Param = { recognizer: string -> bool; key: string }
         with
         member this.recognized() = this.recognizer this.key
@@ -14,17 +14,18 @@ module Choice =
         static member create (chosenOptions: string list) = { key = ""; recognizer = fun key -> chosenOptions |> List.exists (fun k -> k.StartsWith key) }
         static member create prob = { key = ""; recognizer = fun _ -> rand.Next 100 <= prob }
         member old.appendKey newValue = match newValue with None -> old | Some newValue -> { old with key = if old.key.Length = 0 then newValue else old.key + "-" + newValue }
+        member p.state = { isSelected = p.recognized(); key = p.key }
     type Choice<'domainType> = // it's okay for childtype to go unused, e.g. by Grant, but it constrains the allowed children
-        abstract member getMenus: Param -> Selection list
+        abstract member getMenus: Param -> Selection
         abstract member getValues: Param -> 'domainType option
     type Grant<'domainType>(key:string option, value) =
         interface Choice<'domainType> with
-            member this.getMenus param = [{ text = value.ToString(); key = param.key; isCurrentlySelected = true; submenu = None }]
+            member this.getMenus param = Selection.Grant (value.ToString())
             member this.getValues param = Some value
     type Allow<'domainType>(key:string option, value) =
         let key = key |> function None -> value.ToString() |> Some | _ -> key
         interface Choice<'domainType> with
-            member this.getMenus param = [{ text = value.ToString(); key = param.key; isCurrentlySelected = (param.appendKey key).recognized(); submenu = None }]
+            member this.getMenus param = Selection.Option(value.ToString(), param.state)
             member this.getValues param = if (param.appendKey key).recognized() then Some value else None
     type OneTransform<'childType, 'domainType>(key:string option, child: Choice<'childType>, adapter: 'childType option -> 'domainType option) =
         interface Choice<'domainType> with
@@ -36,17 +37,13 @@ module Choice =
                 if param.recognized() then
                     child.getValues param |> adapter
                 else None
-    type ChoiceCtor2<'child1Type, 'child2Type, 'domainType>(key:string option, child1: Choice<'child1Type>, child2: Choice<'child2Type>, adapter) =
+    type ChoiceCtor2<'child1Type, 'child2Type, 'domainType>(label, adapter, key:string option, child1: Choice<'child1Type>, child2: Choice<'child2Type>) =
         interface Choice<'domainType> with
             member this.getMenus param =
                 let param = param.appendKey key
-                if param.recognized() then
-                    let menu = {
-                        header = "Ctor2"
-                        items = child1.getMenus param @ (child2.getMenus param)
-                        }
-                    [{ text = key |> Option.defaultValue "Untitled"; key = param.key; isCurrentlySelected = false; submenu = Some menu }]
-                else [{ text = key |> Option.defaultValue "Untitled"; key = param.key; isCurrentlySelected = false; submenu = None }]
+                if param.recognized() then // don't prompt for dependent choices unless they're relevant/needed
+                    Submenu(label, param.state, [child1.getMenus param; child2.getMenus param])
+                else Option(label, param.state)
             member this.getValues param =
                 let param = param.appendKey key
                 if param.recognized() then
@@ -54,11 +51,13 @@ module Choice =
                     | Some v1, Some v2 -> adapter(v1, v2) |> Some
                     | _ -> None
                 else None
-    type ChoiceCtor<'childType, 'domainType>(key:string option, children: Choice<'childType> list, adapt) =
+    type ChoiceCtor<'childType, 'domainType>(label, adapter, key:string option, children: Choice<'childType> list, adapt) =
         interface Choice<'domainType> with
             member this.getMenus param =
                 let param = param.appendKey key
-                children |> List.collect (fun child -> child.getMenus(param.appendKey key))
+                if param.recognized() then // don't prompt for dependent choices unless they're relevant/needed
+                    Submenu(label, param.state, children |> List.map (fun c -> c.getMenus param))
+                else Option(label, param.state)
             member this.getValues param =
                 let param = param.appendKey key
                 if param.recognized() then
