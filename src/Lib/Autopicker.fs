@@ -73,7 +73,7 @@ module Choice =
     type SomeChoices<'childType, 'domainType>(key:string option, children: Choice<'childType> list, adapter: 'childType option -> 'domainType list option) =
         interface Choice<'domainType list> with
             member this.getMenus param =
-                children |> List.collect (fun child -> child.getMenus(param.appendKey key))
+                Submenu("Some", param.state, children |> List.map (fun child -> child.getMenus(param.appendKey key)))
             member this.getValues param : 'domainType list option =
                 if param.recognized() then
                     let param = param.appendKey key
