@@ -17,15 +17,17 @@ let trace (acc:Param) =
     { acc with recognizer = trace }
 let pick (indices: string list) (choice: _ Choice) = choice.getValues(Param.create indices |> trace)
 let menu (indices: string list) (choice: _ Choice) =
-    let rec prettyprint indentLevel (menuItems:MenuItem list) =
-        for item in menuItems do
-            let indent = String.replicate indentLevel " "
-            let selectionBullet = if item.isCurrentlySelected then "*" else " "
-            match item.submenu with
-            | Some sub ->
-                printfn $"{indent}{selectionBullet}{item.text}:"
-                prettyprint (indentLevel+1) sub.items
-            | None -> printfn $"{indent}{selectionBullet}{item.text}"
+    let rec prettyprint indentLevel (menuItems:Selection) =
+        notImpl()
+        //for item in menuItems do
+        //    let indent = String.replicate indentLevel " "
+
+            //let selectionBullet = if item.isCurrentlySelected then "*" else " "
+            //match item.submenu with
+            //| Some sub ->
+            //    printfn $"{indent}{selectionBullet}{item.text}:"
+            //    prettyprint (indentLevel+1) sub.items
+            //| None -> printfn $"{indent}{selectionBullet}{item.text}"
     choice.getMenus(Param.create indices |> trace)
     |> prettyprint 0
 weaponMaster id |> menu [

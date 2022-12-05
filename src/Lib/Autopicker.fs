@@ -87,11 +87,7 @@ module Choice =
                 else None
     type ConditionalChoice<'childType, 'domainType when 'childType: equality>(key: string option, child: 'childType Choice, childAdapter, conditionals: ('childType * 'domainType list Choice) list) =
         interface Choice<'domainType list> with
-            member this.getMenus param =
-                if param.recognized() then
-                    let param = param.appendKey key
-                    child.getMenus param @ (notImpl())
-                else []
+            member this.getMenus param = notImpl()
             member this.getValues param =
                 let param = param.appendKey key
                 if param.recognized() then
@@ -108,8 +104,7 @@ module Choice =
                 else None
     type ChooseUntil<'childType, 'domainType>(key:string option, children: Choice<'childType> list, adapter: 'childType option -> 'domainType list option, validator) =
         interface Choice<'domainType list> with
-            member this.getMenus param =
-                children |> List.collect (fun child -> child.getMenus(param.appendKey key))
+            member this.getMenus param = notImpl()
             member this.getValues param : 'domainType list option =
                 if param.recognized() then
                     let param = param.appendKey key
@@ -123,8 +118,7 @@ module Choice =
                 else None
     type ChooseAtLeastUntil2D<'childType, 'domainType>(key:string option, children: Choice<'childType> list list, adapter: 'childType option -> 'domainType option, validator) =
         interface Choice<'domainType list> with
-            member this.getMenus param =
-                children |> List.collect (List.collect (fun child -> child.getMenus(param.appendKey key)))
+            member this.getMenus param = notImpl()
             member this.getValues param : 'domainType list option =
                 if param.recognized() then
                     let param = param.appendKey key
@@ -154,17 +148,17 @@ type Compose() =
     // labelled overload of choose.a
     member _.a(label, v) : _ Choice = Allow(Some label, v)
     // choose directly among values, not among choices
-    member this.oneValue (options: _ list) : _ Choice = ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), id)
+    member this.oneValue (options: _ list) : _ Choice = notImpl() // ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), id)
     // choose directly among values, not among choices
-    member this.oneValue (adapt, options: _ list) : _ Choice = ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), adapt)
+    member this.oneValue (adapt, options: _ list) : _ Choice = notImpl() // ChoiceCtor(None, options |> List.map (fun v -> Allow(None, v)), adapt)
     // choose directly among values, not among choices
-    member this.oneValueWith (label, options: _ list) : _ Choice = ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), id)
+    member this.oneValueWith (label, options: _ list) : _ Choice = notImpl() // ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), id)
     // choose directly among values, not among choices
-    member this.oneValueWith (label, adapter, options: _ list) : _ Choice = ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), adapter)
+    member this.oneValueWith (label, adapter, options: _ list) : _ Choice = notImpl() // ChoiceCtor(Some label, options |> List.map (fun v -> Allow(None, v)), adapter)
     // choose among choices
-    member _.oneOf (options: _ Choice list) : _ Choice = ChoiceCtor(None, options, id)
+    member _.oneOf (options: _ Choice list) : _ Choice = notImpl() // ChoiceCtor(None, options, id)
     // choose among choices
-    member _.oneOfWith (label:string) (options: _ Choice list) : _ Choice = ChoiceCtor(Some label, options, id)
+    member _.oneOfWith (label:string) (options: _ Choice list) : _ Choice = notImpl() // ChoiceCtor(Some label, options, id)
     // change a choice yielding a single value into a choice yielding zero or more values (suitable for aggregation) or failure
     member _.mandatory (choice : _ Choice) : _ Choice =
         OneTransform(None, choice,
@@ -193,13 +187,13 @@ type Compose() =
     member _.aggregateWith label (options: _ Choice list) : _ Choice =
         SomeChoices(Some label, options, id)
     member _.ctor ctor choice: _ Choice =
-        ChoiceCtor(None, choice, ctor)
+        notImpl() // ChoiceCtor(None, choice, ctor)
     member _.ctorWith (label:string) ctor choice: _ Choice =
-        ChoiceCtor(Some label, choice, ctor)
+        notImpl() // ChoiceCtor(Some label, choice, ctor)
     member _.ctor2 (ctor: _ -> 'constructedType) choice1 choice2 : _ Choice =
-        ChoiceCtor2(None, choice1, choice2, ctor)
+        notImpl() // ChoiceCtor2(None, choice1, choice2, ctor)
     member _.ctor2With label (ctor: _ -> 'constructedType) choice1 choice2 : _ Choice =
-        ChoiceCtor2(Some label, choice1, choice2, ctor)
+        notImpl() // ChoiceCtor2(Some label, choice1, choice2, ctor)
     member _.conditional expression childAdapter switches : _ Choice = ConditionalChoice(None, expression, childAdapter, switches)
     member _.until validator choices : _ Choice = ChooseUntil(None, choices, id, validator)
     member this.upToBudget (budget:int) costFunc choices : _ Choice =
