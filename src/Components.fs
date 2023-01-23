@@ -50,12 +50,23 @@ let sketchpad dispatch =
                     htmlUpdate svg
                 | None -> ()
             } |> Promise.start
-        sketch.create [
-            sketch.ref canvas
-            sketch.style [style.border "0.06em dashed purple"]
-            sketch.height 400; sketch.width 600; sketch.strokeWidth 4; sketch.strokeColor "blue"
-            sketch.onChange (fun path -> System.Console.WriteLine path)
-            sketch.onStroke (fun path -> System.Console.WriteLine path)
+        Html.div [
+            prop.style [
+                style.display.flex
+                style.flexDirection.row
+                ]
+            prop.children [
+                sketch.create [
+                    sketch.ref canvas
+                    sketch.style [style.border "0.06em dashed purple"]
+                    sketch.height 400; sketch.width 600; sketch.strokeWidth 4; sketch.strokeColor "blue"
+                    sketch.onChange (fun path -> System.Console.WriteLine path)
+                    sketch.onStroke (fun path -> System.Console.WriteLine path)
+                    ]
+                Html.span [
+                    prop.innerHtml html
+                    ]
+                ]
             ]
         Html.div [
             Html.button [prop.text "Export SVG"; prop.onClick(exportSvg)]
