@@ -60,8 +60,8 @@ let sketchpad dispatch =
                     sketch.ref canvas
                     sketch.style [style.border "0.06em dashed purple"]
                     sketch.height 400; sketch.width 600; sketch.strokeWidth 4; sketch.strokeColor "blue"
-                    sketch.onChange (fun path -> System.Console.WriteLine path)
-                    sketch.onStroke (fun path -> System.Console.WriteLine path)
+                    sketch.onChange (fun path -> exportSvg())
+                    sketch.onStroke (fun path -> exportSvg())
                     ]
                 Html.span [
                     prop.innerHtml html
