@@ -36,7 +36,7 @@ open SketchCanvas
 open Fable.Core.JsInterop
 
 [<ReactComponent>]
-let sketchpad dispatch =
+let SketchPad dispatch =
     let canvas = React.useRef(None)
     let html, htmlUpdate = React.useState "Press the Export SVG button"
     let lastPath, lastPathUpdate = React.useState "No paths yet"

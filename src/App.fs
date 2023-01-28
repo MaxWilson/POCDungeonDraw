@@ -92,7 +92,7 @@ let view (model:Model) dispatch =
         | InProgress -> Html.div [prop.text "Retreiving identity..."]
         | Ready None -> Html.div [Html.text "Hello, stranger."; LoginButton dispatch]
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
-        sketchpad()
+        SketchPad()
         Html.div [
             Html.textarea [
                 prop.placeholder "enter some text"
