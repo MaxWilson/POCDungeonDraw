@@ -98,24 +98,29 @@ let view (model:Model) dispatch =
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
         SketchPad(dispatch << ReceiveStroke)
         Svg.svg [
-            Svg.style [svg.className "display"; svg.viewBox(0, 0, 100, 100)]
-            Svg.path [
-                model.strokes
-                    |> List.collect (
-                        fun stroke ->
-                            [   match stroke.paths |> List.ofArray with
-                                | first :: rest ->
-                                    'M', [[first.x; first.y]]
-                                    for p in rest do
-                                        'C', [[p.x;p.y]]
-                                    'Z', []
-                                | [] -> ()
-                                ]
-                        )
-                    |> svg.d
-                svg.stroke "blue"
-                svg.strokeWidth 4
+            svg.width 100
+            svg.height 100
+            svg.viewBox(0, 0, 400, 400)
+            svg.children [
+                Svg.path [
+                        model.strokes
+                        |> List.collect (
+                            fun stroke ->
+                                [   match stroke.paths |> List.ofArray with
+                                    | first :: rest ->
+                                        'M', [[first.x; first.y]]
+                                        yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
+                                    | [] -> ()
+                                    ]
+                            )
+                        |> svg.d
+                        svg.fill "none"
+                    ]
                 ]
+
+            //    |> svg.path
+            svg.stroke "blue"
+            svg.strokeWidth 4
             ]
         Html.div [
             Html.textarea [
