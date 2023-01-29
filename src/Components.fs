@@ -43,41 +43,13 @@ let SketchPad receiveStroke =
     let html, htmlUpdate = React.useState "Press the Export SVG button"
     let lastPath, lastPathUpdate = React.useState None
     let lastStroke, lastStrokeUpdate = React.useState { paths = Array.empty }
-    Html.div [
-        let exportSvg _ =
-            promise {
-                match canvas.current with
-                | Some canvas ->
-                    let! (svg: string) = canvas?exportSvg()
-                    htmlUpdate svg
-                | None -> ()
-            } |> Promise.start
-        Html.div [
-            prop.style [
-                style.display.flex
-                style.flexDirection.row
-                ]
-            prop.children [
-                sketch.create [
-                    sketch.ref canvas
-                    sketch.style [style.border "0.06em dashed purple"]
-                    sketch.height 400; sketch.width 600; sketch.strokeWidth 4; sketch.strokeColor "blue"
-                    sketch.onChange (fun paths -> lastPathUpdate (if paths.Length > 0 then Some paths[-1] else None))
-                    sketch.onStroke (fun stroke -> receiveStroke stroke; lastStrokeUpdate stroke)
-                    ]
-                //Html.span [
-                //    prop.innerHtml html
-                //    ]
-                ]
-            ]
-        //Html.div [
-        //    Html.button [prop.text "Export SVG"; prop.onClick(exportSvg)]
-        //    Html.textarea [prop.value (String.join ", " (lastStroke.paths |> Array.map (fun p -> $"{p.x}, {p.y}"))) ; prop.readOnly true]
-        //    Html.textarea [prop.value (match lastPath with None -> "" | Some path -> $"{path.x}, {path.y}"); prop.readOnly true]
-        //    Html.textarea [prop.value (String.join ", " (lastStroke.paths |> Array.map (fun p -> $"%.2f{p.x}, %.2f{p.y}"))) ; prop.readOnly true]
-        //    ]
+    sketch.create [
+        sketch.ref canvas
+        sketch.style [style.border "0.06em dashed purple"]
+        sketch.height 400; sketch.width 400; sketch.strokeWidth 4; sketch.strokeColor "blue"
+        sketch.onChange (fun paths -> lastPathUpdate (if paths.Length > 0 then Some paths[-1] else None))
+        sketch.onStroke (fun stroke -> (if stroke.paths.Length > 1 then receiveStroke stroke); lastStrokeUpdate stroke)
         ]
-
 
 [<ReactComponent>]
 let Counter () =

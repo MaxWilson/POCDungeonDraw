@@ -16,7 +16,7 @@ type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
 type NavCmd = Load of string | HomeScreen
-type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred; strokes: Stroke list }
+type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred; strokes: (Stroke * string) list }
 type Msg =
     | SetTag of string
     | ReceiveParty of string Deferred
@@ -40,12 +40,28 @@ let LoginButton dispatch =
     else
         Html.button [prop.text "Login"; prop.onClick (fun _ -> update true)]
 
+
+let colorOf ix =
+    let colors = [
+        "red"
+        "yellow"
+        "orange"
+        "green"
+        "blue"
+        "indigo"
+        "violet"
+        "black"
+        "white"
+        ]
+    colors[ix % colors.Length]
 let update msg model =
     match msg with
     | ReceiveParty v -> { model with currentParty = v }, []
     | ReceiveIdentity id -> { model with currentUser = id }, []
     | SetTag v -> { model with tag = v }, Cmd.navigate v
-    | ReceiveStroke stroke -> { model with strokes = stroke::model.strokes }, []
+    | ReceiveStroke stroke -> 
+        printfn $"{(stroke.paths |> Array.map(fun p -> p.x, p.y), colorOf model.strokes.Length)}"
+        { model with strokes = (stroke, colorOf model.strokes.Length)::model.strokes }, []
 
 let save model dispatch fileName =
     promise {
@@ -98,29 +114,22 @@ let view (model:Model) dispatch =
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
         SketchPad(dispatch << ReceiveStroke)
         Svg.svg [
-            svg.width 100
-            svg.height 100
+            svg.className "display"
             svg.viewBox(0, 0, 400, 400)
             svg.children [
-                Svg.path [
-                        model.strokes
-                        |> List.collect (
-                            fun stroke ->
-                                [   match stroke.paths |> List.ofArray with
+                for (stroke,color) in model.strokes do
+                    Svg.path [
+                            [match stroke.paths |> List.ofArray with
                                     | first :: rest ->
                                         'M', [[first.x; first.y]]
                                         yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
-                                    | [] -> ()
-                                    ]
-                            )
-                        |> svg.d
-                        svg.fill "none"
-                    ]
+                                    | [] -> ()]
+                            |> svg.d
+                            svg.stroke color
+                        ]
                 ]
-
-            //    |> svg.path
-            svg.stroke "blue"
             svg.strokeWidth 4
+            svg.fill "none"
             ]
         Html.div [
             Html.textarea [
