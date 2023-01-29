@@ -8,12 +8,6 @@
         "fable"
       ]
     },
-    "paket": {
-      "version": "7.1.5",
-      "commands": [
-        "paket"
-      ]
-    },
     "femto": {
       "version": "0.9.0",
       "commands": [
