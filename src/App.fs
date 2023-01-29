@@ -16,11 +16,12 @@ type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
 type NavCmd = Load of string | HomeScreen
-type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred }
+type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred; strokes: Stroke list }
 type Msg =
     | SetTag of string
     | ReceiveParty of string Deferred
     | ReceiveIdentity of Identity Deferred
+    | ReceiveStroke of Stroke
 
 type TestData = { tag: string; payload: string list }
 
@@ -44,6 +45,7 @@ let update msg model =
     | ReceiveParty v -> { model with currentParty = v }, []
     | ReceiveIdentity id -> { model with currentUser = id }, []
     | SetTag v -> { model with tag = v }, Cmd.navigate v
+    | ReceiveStroke stroke -> { model with strokes = stroke::model.strokes }, []
 
 let save model dispatch fileName =
     promise {
@@ -84,7 +86,7 @@ module Nav =
         |> trace "nav"
 
 let init (onload:NavCmd) =
-    { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = NotStarted } |> Nav.nav onload
+    { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = NotStarted; strokes = [] } |> Nav.nav onload
 
 let view (model:Model) dispatch =
     trace "view" model |> ignore
@@ -94,7 +96,27 @@ let view (model:Model) dispatch =
         | InProgress -> Html.div [prop.text "Retreiving identity..."]
         | Ready None -> Html.div [Html.text "Hello, stranger."; LoginButton dispatch]
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
-        SketchPad()
+        SketchPad(dispatch << ReceiveStroke)
+        Svg.svg [
+            Svg.style [svg.className "display"; svg.viewBox(0, 0, 100, 100)]
+            Svg.path [
+                model.strokes
+                    |> List.collect (
+                        fun stroke ->
+                            [   match stroke.paths |> List.ofArray with
+                                | first :: rest ->
+                                    'M', [[first.x; first.y]]
+                                    for p in rest do
+                                        'C', [[p.x;p.y]]
+                                    'Z', []
+                                | [] -> ()
+                                ]
+                        )
+                    |> svg.d
+                svg.stroke "blue"
+                svg.strokeWidth 4
+                ]
+            ]
         Html.div [
             Html.textarea [
                 prop.placeholder "enter some text"
