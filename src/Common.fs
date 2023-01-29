@@ -18,6 +18,6 @@ module List =
 
 let inline trace label x =
 #if DEBUG
-    //printfn $"Trace/{label}: {x}"
+    printfn $"Trace/{label}: {x}"
 #endif
     x

@@ -25,6 +25,7 @@ type Msg =
 
 type TestData = { tag: string; payload: string list }
 
+let class' (className: string) ctor (elements: _ seq) = ctor [prop.className className; prop.children elements]
 let navigateTo (url: string) =
     Browser.Dom.window.location.assign url
 
@@ -81,9 +82,9 @@ let load model dispatch fileName =
         | Ok ([{ payload = head::_}: TestData]) ->
             ReceiveParty (Ready head) |> dispatch
         | Ok lst ->
-            trace "load.ok no payload" lst |> ignore
+            ()
         | Error err ->
-            trace "load.error" err |> ignore
+            ()
         }
 
 module Nav =
@@ -93,43 +94,43 @@ module Nav =
         match loc.hash with
         | s when s.StartsWith("#") -> s.Substring(1).Replace("/", "") |> Load
         | _ -> HomeScreen
-        |> trace "parse"
     let nav (navCmd: NavCmd) model =
-        match navCmd |> trace "nav1" with
+        match navCmd with
         | HomeScreen -> model, Cmd.Empty
         | Load tag ->
             model, Cmd.ofSub (fun dispatch -> load model dispatch tag |> Promise.start)
-        |> trace "nav"
 
 let init (onload:NavCmd) =
     { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = NotStarted; strokes = [] } |> Nav.nav onload
 
 let view (model:Model) dispatch =
-    trace "view" model |> ignore
-    Html.div [
+    class' "main" Html.div [
         match model.currentUser with
         | NotStarted -> Html.div [prop.text "Initializing identity..."]
         | InProgress -> Html.div [prop.text "Retreiving identity..."]
         | Ready None -> Html.div [Html.text "Hello, stranger."; LoginButton dispatch]
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
-        SketchPad(dispatch << ReceiveStroke)
-        Svg.svg [
-            svg.className "display"
-            svg.viewBox(0, 0, 400, 400)
-            svg.children [
-                for (stroke,color) in model.strokes do
-                    Svg.path [
-                            [match stroke.paths |> List.ofArray with
-                                    | first :: rest ->
-                                        'M', [[first.x; first.y]]
-                                        yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
-                                    | [] -> ()]
-                            |> svg.d
-                            svg.stroke color
-                        ]
+        class' "sketching" Html.div [
+            SketchPad(dispatch << ReceiveStroke)
+            Svg.svg [
+                svg.className "display"
+                svg.viewBox(0, 0, 400, 400)
+                svg.children [
+                    for (stroke,color) in model.strokes do
+                        Svg.path [
+                                [match stroke.paths |> List.ofArray with
+                                        | first :: rest ->
+                                            'M', [[first.x; first.y]]
+                                            yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
+                                        | [] -> ()]
+                                |> svg.d
+                                svg.stroke color
+                            ]
+                    ]
+                svg.strokeWidth 4
+                svg.fill "none"
                 ]
-            svg.strokeWidth 4
-            svg.fill "none"
+
             ]
         Html.div [
             Html.textarea [
@@ -178,7 +179,6 @@ Program.mkProgram init update view
                     | v -> Erroneous, $"{v.identityProvider}/{v.userDetails}")
                     |> Ready |> ReceiveIdentity
                 | Error err -> ReceiveIdentity (Ready (Some (Erroneous, err.ToString())))
-                |> trace "auth"
                 |> dispatch
             }
             |> Promise.start
