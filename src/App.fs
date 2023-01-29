@@ -11,12 +11,14 @@ open Elmish
 open Elmish.Navigation
 importSideEffects "./styles.sass"
 
-
+type GraphicElement =
+    | Stroke of Stroke * color: string
+    | Text of string * color: string
 type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
 type NavCmd = Load of string | HomeScreen
-type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred; strokes: (Stroke * string) list }
+type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred; strokes: GraphicElement list }
 type Msg =
     | SetTag of string
     | ReceiveParty of string Deferred
@@ -62,7 +64,7 @@ let update msg model =
     | SetTag v -> { model with tag = v }, Cmd.navigate v
     | ReceiveStroke stroke -> 
         printfn $"{(stroke.paths |> Array.map(fun p -> p.x, p.y), colorOf model.strokes.Length)}"
-        { model with strokes = (stroke, colorOf model.strokes.Length)::model.strokes }, []
+        { model with strokes = model.strokes@[Stroke(stroke, colorOf model.strokes.Length)] }, []
 
 let save model dispatch fileName =
     promise {
@@ -116,16 +118,19 @@ let view (model:Model) dispatch =
                 svg.className "display"
                 svg.viewBox(0, 0, 400, 400)
                 svg.children [
-                    for (stroke,color) in model.strokes do
-                        Svg.path [
-                                [match stroke.paths |> List.ofArray with
-                                        | first :: rest ->
-                                            'M', [[first.x; first.y]]
-                                            yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
-                                        | [] -> ()]
-                                |> svg.d
-                                svg.stroke color
-                            ]
+                    for element in model.strokes do
+                        match element with
+                        | Stroke(stroke, color) ->
+                            Svg.path [
+                                    [match stroke.paths |> List.ofArray with
+                                            | first :: rest ->
+                                                'M', [[first.x; first.y]]
+                                                yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
+                                            | [] -> ()]
+                                    |> svg.d
+                                    svg.stroke color
+                                ]
+                        | Text(text, color) -> ()
                     ]
                 svg.strokeWidth 4
                 svg.fill "none"
