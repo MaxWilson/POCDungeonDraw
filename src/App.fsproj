@@ -7,6 +7,7 @@
     <None Remove="C:\Users\maxw\.nuget\packages\fsharp.core\5.0.2\contentFiles\any\netstandard2.0\FSharp.Core.xml" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="styles.sass" />
     <Compile Include="Common.fs" />
     <Compile Include="Lib\Autopicker.fs" />
     <Compile Include="DungeonFantasy\Chargen.fs" />

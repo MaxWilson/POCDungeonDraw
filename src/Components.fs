@@ -4,34 +4,36 @@ open Fetch
 open Thoth.Fetch
 
 type 't Deferred = NotStarted | InProgress | Ready of 't
+type Point = { x: float; y: float }
+type Stroke = { paths: Point array }
 
-    module SketchCanvas =
-        open Feliz
-        open Fable.Core
-        open Fable.Core.JsInterop
+module SketchCanvas =
+    open Feliz
+    open Fable.Core
+    open Fable.Core.JsInterop
 
-        [<Erase>]
-        type ISketchProperty =
-            interface end
+    [<Erase>]
+    type ISketchProperty =
+        interface end
 
-        [<AutoOpen>]
-        module private Interop =
-            let inline mkSketchAttr (key: string) (value: obj) : ISketchProperty = unbox (key, value)
-        [<Erase>]
-        type sketch =
-            static member inline create (props: ISketchProperty list) = Interop.reactApi.createElement(import "ReactSketchCanvas" "react-sketch-canvas", createObj !!props)
-            static member inline width (v:int) = mkSketchAttr "width" v
-            static member inline height (v: int) = mkSketchAttr "height" v
-            static member inline strokeWidth (v: int) = mkSketchAttr "strokeWidth" v
-            static member inline strokeColor (v: string) = mkSketchAttr "strokeColor" v
-            static member inline style (props: IStyleAttribute list) : ISketchProperty = !!Interop.mkAttr "style" (createObj !!props)
-            static member inline ref (ref: IRefValue<#Browser.Types.HTMLElement option>): ISketchProperty = !!Interop.mkAttr "ref" ref
-            static member inline onStroke (handler: obj -> unit): ISketchProperty = mkSketchAttr "onStroke" handler
-            static member inline onChange (handler: obj -> unit): ISketchProperty = mkSketchAttr "onChange" handler
-        [<Erase>]
-        type style =
-            static member inline border (v:string) = Interop.mkStyle "border" v
-            static member inline borderRadius (v:string) = Interop.mkStyle "borderRadius" v
+    [<AutoOpen>]
+    module private Interop =
+        let inline mkSketchAttr (key: string) (value: obj) : ISketchProperty = unbox (key, value)
+    [<Erase>]
+    type sketch =
+        static member inline create (props: ISketchProperty list) = Interop.reactApi.createElement(import "ReactSketchCanvas" "react-sketch-canvas", createObj !!props)
+        static member inline width (v:int) = mkSketchAttr "width" v
+        static member inline height (v: int) = mkSketchAttr "height" v
+        static member inline strokeWidth (v: int) = mkSketchAttr "strokeWidth" v
+        static member inline strokeColor (v: string) = mkSketchAttr "strokeColor" v
+        static member inline style (props: IStyleAttribute list) : ISketchProperty = !!Interop.mkAttr "style" (createObj !!props)
+        static member inline ref (ref: IRefValue<#Browser.Types.HTMLElement option>): ISketchProperty = !!Interop.mkAttr "ref" ref
+        static member inline onStroke (handler: Stroke -> unit): ISketchProperty = mkSketchAttr "onStroke" handler
+        static member inline onChange (handler: Point array -> unit): ISketchProperty = mkSketchAttr "onChange" handler
+    [<Erase>]
+    type style =
+        static member inline border (v:string) = Interop.mkStyle "border" v
+        static member inline borderRadius (v:string) = Interop.mkStyle "borderRadius" v
 open SketchCanvas
 open Fable.Core.JsInterop
 
@@ -39,8 +41,8 @@ open Fable.Core.JsInterop
 let SketchPad dispatch =
     let canvas = React.useRef(None)
     let html, htmlUpdate = React.useState "Press the Export SVG button"
-    let lastPath, lastPathUpdate = React.useState "No paths yet"
-    let lastStroke, lastStrokeUpdate = React.useState "No strokes yet"
+    let lastPath, lastPathUpdate = React.useState None
+    let lastStroke, lastStrokeUpdate = React.useState { paths = Array.empty }
     Html.div [
         let exportSvg _ =
             promise {
@@ -60,8 +62,8 @@ let SketchPad dispatch =
                     sketch.ref canvas
                     sketch.style [style.border "0.06em dashed purple"]
                     sketch.height 400; sketch.width 600; sketch.strokeWidth 4; sketch.strokeColor "blue"
-                    sketch.onChange (fun path -> exportSvg())
-                    sketch.onStroke (fun path -> exportSvg())
+                    sketch.onChange (fun paths -> lastPathUpdate (if paths.Length > 0 then Some paths[-1] else None))
+                    sketch.onStroke (fun stroke -> lastStrokeUpdate stroke)
                     ]
                 Html.span [
                     prop.innerHtml html
@@ -71,8 +73,9 @@ let SketchPad dispatch =
         Html.div [
             Html.button [prop.text "Export SVG"; prop.onClick(exportSvg)]
             Html.textarea [prop.value html; prop.readOnly true]
-            Html.textarea [prop.value lastStroke; prop.readOnly true]
-            Html.textarea [prop.value lastPath; prop.readOnly true]
+            Html.textarea [prop.value (String.join ", " (lastStroke.paths |> Array.map (fun p -> $"{p.x}, {p.y}"))) ; prop.readOnly true]
+            Html.textarea [prop.value (match lastPath with None -> "" | Some path -> $"{path.x}, {path.y}"); prop.readOnly true]
+            Html.textarea [prop.value (String.join ", " (lastStroke.paths |> Array.map (fun p -> $"%.2f{p.x}, %.2f{p.y}"))) ; prop.readOnly true]
             ]
         ]
 

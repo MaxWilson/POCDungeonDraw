@@ -9,6 +9,8 @@ open Fable.Core.JsInterop
 open Components
 open Elmish
 open Elmish.Navigation
+importSideEffects "./styles.sass"
+
 
 type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous

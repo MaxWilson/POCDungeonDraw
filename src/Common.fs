@@ -10,7 +10,8 @@ let flip f x y = f y x
 let rand = System.Random()
 let chooseRandom (lst: _ list) =
     lst[rand.Next lst.Length]
-
+module String =
+    let join (sep:string) (input: string seq) = System.String.Join(sep, input)
 module List =
     let mapiOneBased f lst = lst |> List.mapi (fun ix -> f (ix + 1))
     let create v = [v]
