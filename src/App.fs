@@ -13,7 +13,7 @@ importSideEffects "./styles.sass"
 
 type GraphicElement =
     | Stroke of Stroke * color: string
-    | Text of string * color: string
+    | Text of string * Point * color: string
 type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
@@ -24,6 +24,7 @@ type Msg =
     | ReceiveParty of string Deferred
     | ReceiveIdentity of Identity Deferred
     | ReceiveStroke of Stroke
+    | ReceiveText of string
 
 type TestData = { tag: string; payload: string list }
 
@@ -42,7 +43,16 @@ let LoginButton dispatch =
             ]
     else
         Html.button [prop.text "Login"; prop.onClick (fun _ -> update true)]
-
+[<ReactComponent>]
+let TextEntry dispatch =
+    let txt, update = React.useState ""
+    Html.form [
+        prop.onSubmit(fun e -> e.preventDefault(); ReceiveText txt |> dispatch; update "")
+        prop.children [
+            Html.input [prop.type'.text; prop.placeholder "Enter some text"; prop.valueOrDefault txt; prop.onChange update]
+            Html.button [prop.type'.submit; prop.text "OK"]
+            ]
+        ]
 
 let colorOf ix =
     let colors = [
@@ -59,12 +69,23 @@ let colorOf ix =
     colors[ix % colors.Length]
 let update msg model =
     match msg with
-    | ReceiveParty v -> { model with currentParty = v }, []
+    | ReceiveParty v ->
+        { model with currentParty = v }, []
     | ReceiveIdentity id -> { model with currentUser = id }, []
     | SetTag v -> { model with tag = v }, Cmd.navigate v
     | ReceiveStroke stroke -> 
         printfn $"{(stroke.paths |> Array.map(fun p -> p.x, p.y), colorOf model.strokes.Length)}"
         { model with strokes = model.strokes@[Stroke(stroke, colorOf model.strokes.Length)] }, []
+    | ReceiveText txt ->
+        // place the text near the start of a recent line
+        let coord = 
+            match model.strokes |> List.rev
+                    |> List.tryPick (function 
+                        | Stroke(stroke,_) -> stroke.paths |> Array.tryHead 
+                        | Text(_, point, _) -> createObj ["x", point.x; "y", (point.y + 50. |> box)] |> unbox |> Some) with
+            | Some point -> point
+            | None -> createObj ["x", 0.; "y", 0.] |> unbox
+        { model with strokes = model.strokes@[Text(txt, coord, colorOf model.strokes.Length)] }, []
 
 let save model dispatch fileName =
     promise {
@@ -129,14 +150,23 @@ let view (model:Model) dispatch =
                                             | [] -> ()]
                                     |> svg.d
                                     svg.stroke color
+                                    svg.strokeWidth 4
+                                    svg.fill "none"
                                 ]
-                        | Text(text, color) -> ()
+                        | Text(text, point, color) ->
+                            Svg.text [
+                                svg.x point.x
+                                svg.y point.y
+                                svg.text text
+                                svg.stroke color
+                                svg.fontSize 40
+                                svg.fill color
+                                ]
                     ]
-                svg.strokeWidth 4
-                svg.fill "none"
                 ]
 
             ]
+        TextEntry dispatch
         Html.div [
             Html.textarea [
                 prop.placeholder "enter some text"
