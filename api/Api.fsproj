@@ -17,12 +17,17 @@
   <ItemGroup>
     <Compile Include="Auth.fs" />
     <Compile Include="API.fs" />
+    <Compile Include="Bindings.fs" />
+    <Compile Include="Startup.fs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.7.0" />
     <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.4.0" />
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.CosmosDB" Version="3.0.10" />
+    <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="4.0.1" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.CosmosDB" Version="4.0.0" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.3" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="Thoth.Json.Net" Version="10.1.0" />
   </ItemGroup>
 </Project>

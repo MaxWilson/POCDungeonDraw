@@ -18,15 +18,15 @@ type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
 type NavCmd = Load of string | HomeScreen
-type Model = { tag: string; currentUser: Identity Deferred; currentParty: string Deferred; strokes: GraphicElement list }
+type SavedPicture = { owner: string; tag: string; payload: GraphicElement list }
+type Model = { tag: string; currentUser: Identity Deferred; strokes: GraphicElement list; loadedPictures: SavedPicture list Deferred }
 type Msg =
     | SetTag of string
-    | ReceiveParty of string Deferred
     | ReceiveIdentity of Identity Deferred
+    | ReceiveSavedPictures of SavedPicture list Deferred
     | ReceiveStroke of Stroke
     | ReceiveText of string
-
-type TestData = { tag: string; payload: string list }
+    | ResetToPicture of SavedPicture
 
 let class' (className: string) ctor (elements: _ seq) = ctor [prop.className className; prop.children elements]
 let navigateTo (url: string) =
@@ -49,7 +49,7 @@ let TextEntry dispatch =
     Html.form [
         prop.onSubmit(fun e -> e.preventDefault(); ReceiveText txt |> dispatch; update "")
         prop.children [
-            Html.input [prop.type'.text; prop.placeholder "Enter some text"; prop.valueOrDefault txt; prop.onChange update]
+            Html.input [prop.type'.text; prop.placeholder "Enter some text to display"; prop.valueOrDefault txt; prop.onChange update]
             Html.button [prop.type'.submit; prop.text "OK"]
             ]
         ]
@@ -69,12 +69,17 @@ let colorOf ix =
     colors[ix % colors.Length]
 let update msg model =
     match msg with
-    | ReceiveParty v ->
-        { model with currentParty = v }, []
     | ReceiveIdentity id -> { model with currentUser = id }, []
+    | ReceiveSavedPictures v ->
+        match v with
+        | Ready(head::_) ->
+            { model with loadedPictures = v }, Cmd.ofMsg (ResetToPicture head)
+        | _ ->
+            { model with loadedPictures = v }, []
+    | ResetToPicture v ->
+        { model with strokes = v.payload }, []
     | SetTag v -> { model with tag = v }, Cmd.navigate v
     | ReceiveStroke stroke -> 
-        printfn $"{(stroke.paths |> Array.map(fun p -> p.x, p.y), colorOf model.strokes.Length)}"
         { model with strokes = model.strokes@[Stroke(stroke, colorOf model.strokes.Length)] }, []
     | ReceiveText txt ->
         // place the text near the start of a recent line
@@ -89,31 +94,29 @@ let update msg model =
 
 let save model dispatch fileName =
     promise {
-        match model.currentParty with
-        | Ready party ->
-            let data : TestData = { tag = fileName; payload = [ party ] }
+        let data = {| id = "ignore"; owner = ""; tag = fileName; payload = model.strokes |}
+        try
             do! Thoth.Fetch.Fetch.post($"/api/WriteData", data)
             SetTag fileName |> dispatch
-        | _ -> ()
+        with err ->
+            Browser.Dom.window.alert($"Oops! Something went wrong. {err}")
+            raise err
         }
 
 let load model dispatch fileName =
     promise {
-        ReceiveParty (InProgress) |> dispatch
+        ReceiveSavedPictures (InProgress) |> dispatch
         let! data = Thoth.Fetch.Fetch.tryFetchAs($"/api/ReadData/{fileName}")
         match data with
-        | Ok ([{ payload = head::_}: TestData]) ->
-            ReceiveParty (Ready head) |> dispatch
-        | Ok lst ->
-            ()
+        | Ok matches ->
+            ReceiveSavedPictures (Ready matches) |> dispatch
         | Error err ->
-            ()
+            failwith $"Shouldn't happen: got an error during loading {err}"
         }
 
 module Nav =
     open Elmish.Navigation
     let parse (loc:Browser.Types.Location) : NavCmd =
-        printfn $"Loc.hash='{loc.hash}'"
         match loc.hash with
         | s when s.StartsWith("#") -> s.Substring(1).Replace("/", "") |> Load
         | _ -> HomeScreen
@@ -124,7 +127,7 @@ module Nav =
             model, Cmd.ofSub (fun dispatch -> load model dispatch tag |> Promise.start)
 
 let init (onload:NavCmd) =
-    { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; currentParty = NotStarted; strokes = [] } |> Nav.nav onload
+    { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; strokes = []; loadedPictures = NotStarted } |> Nav.nav onload
 
 let view (model:Model) dispatch =
     class' "main" Html.div [
@@ -168,15 +171,7 @@ let view (model:Model) dispatch =
             ]
         TextEntry dispatch
         Html.div [
-            Html.textarea [
-                prop.placeholder "enter some text"
-                match model.currentParty with
-                | Ready party ->
-                    prop.valueOrDefault party
-                | _ -> prop.value ""
-                prop.onChange (Ready >> ReceiveParty >> dispatch)
-                ]
-            SaveButton (save model dispatch >> Promise.start)
+            SaveButton (save model dispatch)
             Html.span "Tag:"
             Html.input [prop.placeholder "Enter a tag"; prop.valueOrDefault model.tag; prop.onChange (SetTag >> dispatch)]
             ]
