@@ -91,7 +91,7 @@ module GetMessage =
                     with err ->
                         log.LogError $"Could not save because '{err.ToString()}'"
                         raise err
-            | _ -> failwith "You must log in first in order to save"
+            | _ -> failwith "This should never happen"
         }
 
 

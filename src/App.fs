@@ -19,9 +19,10 @@ type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
 type NavCmd = Load of string | HomeScreen
 type SavedPicture = { owner: string; tag: string; payload: GraphicElement list }
-type Model = { tag: string; currentUser: Identity Deferred; strokes: GraphicElement list; loadedPictures: SavedPicture list Deferred }
+type Model = { alias: string; currentUser: Identity Deferred; strokes: GraphicElement list; loadedPictures: SavedPicture list Deferred }
 type Msg =
-    | SetTag of string
+    | SetAlias of string
+    | SetLocation of string
     | ReceiveIdentity of Identity Deferred
     | ReceiveSavedPictures of SavedPicture list Deferred
     | ReceiveStroke of Stroke
@@ -78,15 +79,16 @@ let update msg model =
             { model with loadedPictures = v }, []
     | ResetToPicture v ->
         { model with strokes = v.payload }, []
-    | SetTag v -> { model with tag = v }, Cmd.navigate v
-    | ReceiveStroke stroke -> 
+    | SetAlias v -> { model with alias = v }, []
+    | SetLocation v -> model, Cmd.navigate v
+    | ReceiveStroke stroke ->
         { model with strokes = model.strokes@[Stroke(stroke, colorOf model.strokes.Length)] }, []
     | ReceiveText txt ->
         // place the text near the start of a recent line
-        let coord = 
+        let coord =
             match model.strokes |> List.rev
-                    |> List.tryPick (function 
-                        | Stroke(stroke,_) -> stroke.paths |> Array.tryHead 
+                    |> List.tryPick (function
+                        | Stroke(stroke,_) -> stroke.paths |> Array.tryHead
                         | Text(_, point, _) -> createObj ["x", point.x; "y", (point.y + 50. |> box)] |> unbox |> Some) with
             | Some point -> point
             | None -> createObj ["x", 0.; "y", 0.] |> unbox
@@ -97,7 +99,7 @@ let save model dispatch fileName =
         let data = {| id = "ignore"; owner = ""; tag = fileName; payload = model.strokes |}
         try
             do! Thoth.Fetch.Fetch.post($"/api/WriteData", data)
-            SetTag fileName |> dispatch
+            SetLocation fileName |> dispatch
         with err ->
             Browser.Dom.window.alert($"Oops! Something went wrong. {err}")
             raise err
@@ -123,11 +125,11 @@ module Nav =
     let nav (navCmd: NavCmd) model =
         match navCmd with
         | HomeScreen -> model, Cmd.Empty
-        | Load tag ->
-            model, Cmd.ofSub (fun dispatch -> load model dispatch tag |> Promise.start)
+        | Load pictureName ->
+            model, Cmd.ofSub (fun dispatch -> load model dispatch pictureName |> Promise.start)
 
 let init (onload:NavCmd) =
-    { tag = System.Guid.NewGuid().ToString(); currentUser = NotStarted; strokes = []; loadedPictures = NotStarted } |> Nav.nav onload
+    { alias = ""; currentUser = NotStarted; strokes = []; loadedPictures = NotStarted } |> Nav.nav onload
 
 let view (model:Model) dispatch =
     class' "main" Html.div [
@@ -140,7 +142,7 @@ let view (model:Model) dispatch =
             SketchPad(dispatch << ReceiveStroke)
             Svg.svg [
                 svg.className "display"
-                svg.viewBox(0, 0, 400, 400)
+                svg.viewBox(0, 0, 400, 300)
                 svg.children [
                     for element in model.strokes do
                         match element with
@@ -170,13 +172,14 @@ let view (model:Model) dispatch =
 
             ]
         TextEntry dispatch
-        Html.div [
-            SaveButton (save model dispatch)
-            Html.span "Tag:"
-            Html.input [prop.placeholder "Enter a tag"; prop.valueOrDefault model.tag; prop.onChange (SetTag >> dispatch)]
-            ]
+        SaveButton (save model dispatch)
+
         Counter()
-        Message model.tag
+        Html.div [
+            Html.span "Name override:"
+            Html.input [prop.placeholder "Enter your alias, Mr. Bond"; prop.valueOrDefault model.alias; prop.onChange (SetAlias >> dispatch)]
+            ]
+        Message model.alias
         ]
 
 open Browser.Dom

@@ -46,7 +46,7 @@ let SketchPad receiveStroke =
     sketch.create [
         sketch.ref canvas
         sketch.style [style.border "0.06em dashed purple"]
-        sketch.height 400; sketch.width 400; sketch.strokeWidth 4; sketch.strokeColor "blue"
+        sketch.height 300; sketch.width 300; sketch.strokeWidth 4; sketch.strokeColor "blue"
         sketch.onChange (fun paths -> lastPathUpdate (if paths.Length > 0 then Some paths[-1] else None))
         sketch.onStroke (fun stroke -> (if stroke.paths.Length > 1 then receiveStroke stroke); lastStrokeUpdate stroke)
         ]
@@ -69,7 +69,7 @@ let Message (tag:string) =
                                             setMessage InProgress
                                             let! message =
                                                 Fetch.get (
-                                                    $"/api/GetMessage?name={tag}",
+                                                    $"/api/GetMessage" + (if tag <> "" then "?name=" + tag else ""),
                                                     headers = [ HttpRequestHeaders.Accept "application/json" ]
                                                 )
 
@@ -108,7 +108,7 @@ let SaveButton saveCmd =
                     let invalid = fileName |> System.String.IsNullOrWhiteSpace
                     Html.span "Save as: "
                     Html.input [prop.placeholder "E.g. myPicture1"; prop.valueOrDefault fileName; prop.onChange (Some >> update)]
-                    let onClick() = 
+                    let onClick() =
                         promise {
                             updateState InProgress
                             try
