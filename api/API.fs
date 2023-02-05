@@ -16,6 +16,7 @@ module GetMessage =
     open Azure.Identity
     open Microsoft.Azure.WebJobs.Extensions.Http
     open Microsoft.AspNetCore.Routing
+    open System.Threading.Tasks
 
     // Define a nullable container to deserialize into.
     type NameContainer = { Name: string }
@@ -31,25 +32,14 @@ module GetMessage =
         | Text of string * Point * color: string
     type SavedPicture = { id: string; tag: string; owner: string; payload: GraphicElement array }
 
-    [<FunctionName("psst")>]
-    let Psst ([<HttpTrigger(AuthorizationLevel.Function, "get")>] req: HttpRequest) (log: ILogger)
-        =
-        task {
-            let secretClient = new SecretClient(
-                new Uri("https://shiningsword.vault.azure.net"),
-                new DefaultAzureCredential())
-            let! secret = secretClient.GetSecretAsync("Test123")
-            return ("Yo dude? I'm still here." + secret.Value.Value.Length.ToString())
-        }
-
     let toJsonResponse data =
         new HttpResponseMessage(
-            HttpStatusCode.OK, 
+            HttpStatusCode.OK,
             Content = new StringContent(Encode.Auto.toString data))
 
 
     [<FunctionName("ReadData")>]
-    let ReadData ([<HttpTrigger(AuthorizationLevel.Function, "get", Route = "ReadData/{id}")>] req: HttpRequest) (log: ILogger)
+    let ReadData ([<HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "ReadData/{id}")>] req: HttpRequest) (log: ILogger)
         ([<CosmosDB(
             databaseName = "%Database%",
             containerName = "%Container%",
@@ -60,15 +50,17 @@ module GetMessage =
                     | true, v -> v
                     | _ -> failwith "Id is mandatory"
         log.LogInformation $"Calling ReadData/{id}"
+
         match req with
         | Auth.Identity ident ->
-            task {
-                return (data |> Seq.filter (fun d -> d.owner = ident.UserDetails || d.owner = "publicDomain") |> Array.ofSeq |> toJsonResponse)
-            }
-        | _ -> task { return Array.empty |> toJsonResponse }
+            (data |> Seq.filter (fun d -> d.owner = ident.UserDetails || d.owner = "publicDomain") |> Array.ofSeq |> toJsonResponse)
+        | _ ->
+            (data |> Seq.filter (fun d -> d.owner = "publicDomain") |> Array.ofSeq |> toJsonResponse)
+        |> Task.FromResult
+
 
     [<FunctionName("WriteData")>]
-    let WriteData ([<HttpTrigger(AuthorizationLevel.Function, "post")>] req: HttpRequest) (log: ILogger)
+    let WriteData ([<HttpTrigger(AuthorizationLevel.User, "post")>] req: HttpRequest) (log: ILogger)
         ([<CosmosDB(
             databaseName = "%Database%",
             containerName = "%Container%",
@@ -105,7 +97,7 @@ module GetMessage =
 
     [<FunctionName("GetMessage")>]
     let run
-        ([<HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)>] req: HttpRequest)
+        ([<HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)>] req: HttpRequest)
         (log: ILogger)
         =
         async {
