@@ -18,9 +18,7 @@ module GetMessage =
     open Microsoft.AspNetCore.Routing
 
     // Define a nullable container to deserialize into.
-    [<AllowNullLiteral>]
-    type NameContainer() =
-        member val Name = "" with get, set
+    type NameContainer = { Name: string }
 
     // For convenience, it's better to have a central place for the literal.
     [<Literal>]
@@ -121,19 +119,18 @@ module GetMessage =
 
             use stream = new StreamReader(req.Body)
             let! reqBody = stream.ReadToEndAsync() |> Async.AwaitTask
-
             let data =
                 Decode.Auto.fromString<NameContainer>(reqBody)
 
             let name =
-                match req with
-                | Auth.Identity ident -> ident.UserDetails
-                | _ ->
-                    match nameOpt with
+                match nameOpt with
                     | Some n -> n
                     | None ->
                         match data with
-                        | Error _ | Ok null -> ""
+                        | Error _ ->
+                            match req with
+                            | Auth.Identity ident -> ident.UserDetails
+                            | _ -> "stranger"
                         | Ok nc -> nc.Name
 
             let responseMessage =
