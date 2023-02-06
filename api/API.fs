@@ -70,28 +70,32 @@ module GetMessage =
         =
         task {
             let isPublicDomain = req.Query["publicDomain"] |> bool.TryParse |> function true, v -> v | _ -> false
-            match req with
-            | Auth.Identity ident ->
-                let! requestBody = ((new StreamReader(req.Body)).ReadToEndAsync());
-                log.LogInformation $"About to deserialize '{requestBody}'"
-                match Decode.Auto.fromString<SavedPicture>(requestBody) with
-                | Error err -> $"Could not deserialize JSON because '{err}'" |> InvalidOperationException |> raise
-                | Ok data ->
-                    // allow dedication to public domain: anyone can edit or retrieve
-                    let owner = if isPublicDomain then "publicDomain" else ident.UserDetails
-                    let data = { data with owner = owner; id = $"{ident.UserDetails}-{data.tag}" }
-                    log.LogInformation $"Got tag = '{data.id}'"
-                    log.LogInformation $"Writing {data.id} to CosmosDB"
 
-                    // notice that we're taking Thoth JSON as input and effectively outputting
-                    // another form of JSON as output via CosmosDB IAsyncCollector. Therefore
-                    // we don't need or want Thoth guarantees on existence of id, for example.
-                    try
-                        do! output.AddAsync(data)
-                    with err ->
-                        log.LogError $"Could not save because '{err.ToString()}'"
-                        raise err
-            | _ -> failwith "This should never happen"
+            let! requestBody = ((new StreamReader(req.Body)).ReadToEndAsync())
+            log.LogInformation $"About to deserialize '{requestBody}'"
+            match Decode.Auto.fromString<SavedPicture>(requestBody) with
+            | Ok data ->
+                let owner, recordId =
+                    match req with
+                    | Auth.Identity ident when not isPublicDomain -> ident.UserDetails, $"{ident.UserDetails}-{data.tag}"
+                    | _ -> "publicDomain", $"anonymous-{data.tag}"
+
+                // allow dedication to public domain: anyone can edit or retrieve
+                let data = { data with owner = owner; id = recordId }
+
+                log.LogInformation $"Got tag = '{data.id}'"
+                log.LogInformation $"Writing {data.id} to CosmosDB"
+
+                // notice that we're taking Thoth JSON as input and effectively outputting
+                // another form of JSON as output via CosmosDB IAsyncCollector. Therefore
+                // we don't need or want Thoth guarantees on existence of id, for example.
+                try
+                    do! output.AddAsync(data)
+                with err ->
+                    log.LogError $"Could not save because '{err.ToString()}'"
+                    return raise err
+            | Error err ->
+                return $"Could not deserialize JSON because '{err}'" |> InvalidOperationException |> raise
         }
 
 

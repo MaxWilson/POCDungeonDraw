@@ -100,7 +100,11 @@ let save model dispatch fileName =
         try
             do! Thoth.Fetch.Fetch.post($"/api/WriteData", data)
             SetLocation fileName |> dispatch
-        with err ->
+        with
+        | err when err.Message.Contains "401 Unauthorized" ->
+            Browser.Dom.window.alert($"Sorry, you can't save until you log in. Please hit the 'Login' button at the top.")
+            raise err
+        | err ->
             Browser.Dom.window.alert($"Oops! Something went wrong. {err}")
             raise err
         }
