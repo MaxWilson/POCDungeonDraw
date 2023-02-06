@@ -60,7 +60,7 @@ module GetMessage =
 
 
     [<FunctionName("WriteData")>]
-    let WriteData ([<HttpTrigger(AuthorizationLevel.User, "post")>] req: HttpRequest) (log: ILogger)
+    let WriteData ([<HttpTrigger(AuthorizationLevel.Anonymous, "post")>] req: HttpRequest) (log: ILogger)
         ([<CosmosDB(
             databaseName = "%Database%",
             containerName = "%Container%",
