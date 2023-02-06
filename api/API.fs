@@ -53,7 +53,8 @@ module GetMessage =
 
         match req with
         | Auth.Identity ident ->
-            (data |> Seq.filter (fun d -> d.owner = ident.UserDetails || d.owner = "publicDomain") |> Array.ofSeq |> toJsonResponse)
+            // own stuff comes first, then public domain
+            (data |> Seq.filter (fun d -> d.owner = ident.UserDetails || d.owner = "publicDomain") |> Seq.sortByDescending (fun d -> d.owner = ident.UserDetails) |> Array.ofSeq |> toJsonResponse)
         | _ ->
             (data |> Seq.filter (fun d -> d.owner = "publicDomain") |> Array.ofSeq |> toJsonResponse)
         |> Task.FromResult
