@@ -143,37 +143,39 @@ let view (model:Model) dispatch =
         | Ready None -> Html.div [Html.text "Hello, stranger."; LoginButton dispatch]
         | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
         class' "sketching" Html.div [
-            SketchPad(dispatch << ReceiveStroke)
-            Svg.svg [
-                svg.className "display"
-                svg.viewBox(0, 0, 400, 300)
-                svg.children [
-                    for element in model.strokes do
-                        match element with
-                        | Stroke(stroke, color) ->
-                            Svg.path [
-                                    [match stroke.paths |> List.ofArray with
-                                            | first :: rest ->
-                                                'M', [[first.x; first.y]]
-                                                yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
-                                            | [] -> ()]
-                                    |> svg.d
+            match model.loadedPictures with
+            | InProgress -> Html.div "Loading pictures, please wait..."
+            | _ ->
+                SketchPad(dispatch << ReceiveStroke)
+                Svg.svg [
+                    svg.className "display"
+                    svg.viewBox(0, 0, 400, 300)
+                    svg.children [
+                        for element in model.strokes do
+                            match element with
+                            | Stroke(stroke, color) ->
+                                Svg.path [
+                                        [match stroke.paths |> List.ofArray with
+                                                | first :: rest ->
+                                                    'M', [[first.x; first.y]]
+                                                    yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
+                                                | [] -> ()]
+                                        |> svg.d
+                                        svg.stroke color
+                                        svg.strokeWidth 4
+                                        svg.fill "none"
+                                    ]
+                            | Text(text, point, color) ->
+                                Svg.text [
+                                    svg.x point.x
+                                    svg.y point.y
+                                    svg.text text
                                     svg.stroke color
-                                    svg.strokeWidth 4
-                                    svg.fill "none"
-                                ]
-                        | Text(text, point, color) ->
-                            Svg.text [
-                                svg.x point.x
-                                svg.y point.y
-                                svg.text text
-                                svg.stroke color
-                                svg.fontSize 40
-                                svg.fill color
-                                ]
+                                    svg.fontSize 40
+                                    svg.fill color
+                                    ]
+                        ]
                     ]
-                ]
-
             ]
         TextEntry dispatch
         SaveButton (save model dispatch)
