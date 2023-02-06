@@ -10,13 +10,14 @@ open Thoth.Json.Net
 open Microsoft.Extensions.Logging
 open System.Net.Http
 open System.Net
+open Azure.Security.KeyVault.Secrets
+open Azure.Identity
+open Microsoft.Azure.WebJobs.Extensions.Http
+open Microsoft.AspNetCore.Routing
+open System.Threading.Tasks
+open Azure.Messaging.WebPubSub
 
-module GetMessage =
-    open Azure.Security.KeyVault.Secrets
-    open Azure.Identity
-    open Microsoft.Azure.WebJobs.Extensions.Http
-    open Microsoft.AspNetCore.Routing
-    open System.Threading.Tasks
+module API =
 
     // Define a nullable container to deserialize into.
     type NameContainer = { Name: string }
@@ -100,8 +101,9 @@ module GetMessage =
         }
 
 
+    // exists only for debugging purposes
     [<FunctionName("GetMessage")>]
-    let run
+    let GetMessage
         ([<HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)>] req: HttpRequest)
         (log: ILogger)
         =
@@ -142,3 +144,29 @@ module GetMessage =
             return OkObjectResult(responseMessage) :> IActionResult
         }
         |> Async.StartAsTask
+
+    [<FunctionName("CreateTokenRequest")>]
+    let CreateTokenRequest(
+        [<HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "CreateTokenRequest/{hubName}/{groupName}/")>] req: HttpRequest,
+        hubName : string,
+        groupName : string,
+        log : ILogger) =
+        task {
+            let clientId =
+                match req with
+                | Auth.Identity ident -> ident.UserDetails
+                | _ -> "anonymous"
+            let webPubSubService = new WebPubSubServiceClient(
+                Environment.GetEnvironmentVariable("AzPubSubConnectionString"),
+                hubName)
+            let! clientUri = webPubSubService.GetClientAccessUriAsync(
+                TimeSpan.FromMinutes(30),
+                clientId,
+                [$"webpubsub.joinLeaveGroup.{groupName}"; $"webpubsub.sendToGroup.{groupName}"]
+                )
+
+            return new HttpResponseMessage(
+                HttpStatusCode.OK,
+                Content = new StringContent(clientUri.ToString())
+                )
+            }
