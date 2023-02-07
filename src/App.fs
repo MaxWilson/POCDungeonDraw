@@ -90,7 +90,9 @@ let update msg model =
     | SetAlias v -> { model with alias = v }, []
     | SetLocation v -> model, Cmd.navigate v
     | ReceiveStroke stroke ->
-        { model with strokes = model.strokes@[Stroke(stroke, colorOf model.strokes.Length)] }, []
+        let stroke' = Stroke(stroke, colorOf model.strokes.Length)
+        match model.pubsubConnection with None -> () | Some transmit -> Encode.Auto.toString(0, [stroke']) |> transmit
+        { model with strokes = model.strokes@[stroke'] }, []
     | ReceiveText txt ->
         // place the text near the start of a recent line
         let coord =
@@ -100,7 +102,9 @@ let update msg model =
                         | Text(_, point, _) -> createObj ["x", point.x; "y", (point.y + 50. |> box)] |> unbox |> Some) with
             | Some point -> point
             | None -> createObj ["x", 0.; "y", 0.] |> unbox
-        { model with strokes = model.strokes@[Text(txt, coord, colorOf model.strokes.Length)] }, []
+        let txt = Text(txt, coord, colorOf model.strokes.Length)
+        match model.pubsubConnection with None -> () | Some transmit -> Encode.Auto.toString(0, [txt]) |> transmit
+        { model with strokes = model.strokes@[txt] }, []
     | RemoteReceiveGraphics graphics ->
         { model with strokes = model.strokes@graphics }, []
     | Connected send ->

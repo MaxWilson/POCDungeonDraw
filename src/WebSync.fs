@@ -9,6 +9,13 @@ type PubSubMessage = {
     ``type``: string
     data: string option
     }
+type PubSubPayload = {
+    ``type``: string
+    group: string
+    noEcho: bool
+    dataType: string
+    data: string
+    }
 let mutable socket: WebSocket option = None
 
 [<Emit("new WebSocket($0, $1)")>]
@@ -34,19 +41,20 @@ let connect(clientUrl, groupName:string, onOpen, (onMsg: string -> unit)) =
         fun _ ->
             printfn "Connected to pubsub"
             onOpen()
-            s.send({| ``type`` = "joinGroup"; group = groupName |})
+            let jsonString = Encode.Auto.toString(0, {| ``type`` = "joinGroup"; group = groupName |})
+            s.send(jsonString)
     s.onclose <-
         fun _ ->
-            breakHere()
             printfn "Disconnecting from pubsub"
-            //socket <- None
+            socket <- None
     s.onerror <-
         fun (event: Event) ->
             printfn $"Pubsub error: '{event}'"
             System.Console.WriteLine(event)
     socket <- Some s
     let transmit jsonTxt =
-        s.send({| ``type`` = "sendToGroup"; group = groupName; noEcho = true; dataType = "text"; data = jsonTxt |})
+        let json = Encode.Auto.toString(0, { ``type`` = "sendToGroup"; group = groupName; noEcho = true; dataType = "text"; data = jsonTxt })
+        s.send(json)
     transmit
 
 (* TEMPLATE JavaScript (imperative)
