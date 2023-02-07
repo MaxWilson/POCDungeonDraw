@@ -9,6 +9,8 @@ open Fable.Core.JsInterop
 open Components
 open Elmish
 open Elmish.Navigation
+open Thoth.Json
+
 importSideEffects "./styles.sass"
 
 type GraphicElement =
@@ -19,7 +21,11 @@ type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
 type NavCmd = Load of string | HomeScreen
 type SavedPicture = { owner: string; tag: string; payload: GraphicElement list }
-type Model = { alias: string; currentUser: Identity Deferred; strokes: GraphicElement list; loadedPictures: SavedPicture list Deferred }
+type Model = {
+    alias: string; currentUser: Identity Deferred;
+    strokes: GraphicElement list; loadedPictures: SavedPicture list Deferred
+    pubsubConnection: (string -> unit) option
+    }
 type Msg =
     | SetAlias of string
     | SetLocation of string
@@ -28,6 +34,8 @@ type Msg =
     | ReceiveStroke of Stroke
     | ReceiveText of string
     | ResetToPicture of SavedPicture
+    | Connected of (string -> unit)
+    | RemoteReceiveGraphics of GraphicElement list
 
 let class' (className: string) ctor (elements: _ seq) = ctor [prop.className className; prop.children elements]
 let navigateTo (url: string) =
@@ -93,6 +101,10 @@ let update msg model =
             | Some point -> point
             | None -> createObj ["x", 0.; "y", 0.] |> unbox
         { model with strokes = model.strokes@[Text(txt, coord, colorOf model.strokes.Length)] }, []
+    | RemoteReceiveGraphics graphics ->
+        { model with strokes = model.strokes@graphics }, []
+    | Connected send ->
+        { model with pubsubConnection = Some send }, []
 
 let save model dispatch fileName =
     promise {
@@ -116,8 +128,15 @@ let load model dispatch fileName =
         match data with
         | Ok matches ->
             ReceiveSavedPictures (Ready matches) |> dispatch
+            let! clientUrlResponse = Fetch.fetch $"/api/CreateTokenRequest/dnd/{fileName}/" []
+            let! clientUrl = clientUrlResponse.text()
+            let onMsg (txt: string) =
+                match txt |> Decode.Auto.fromString with
+                | Error e -> shouldntHappen e
+                | Ok v -> v |> RemoteReceiveGraphics |> dispatch
+            WebSync.connect(clientUrl, fileName, ignore, onMsg) |> Connected |> dispatch
         | Error err ->
-            failwith $"Shouldn't happen: got an error during loading {err}"
+            shouldntHappen err
         }
 
 module Nav =
@@ -133,7 +152,12 @@ module Nav =
             model, Cmd.ofSub (fun dispatch -> load model dispatch pictureName |> Promise.start)
 
 let init (onload:NavCmd) =
-    { alias = ""; currentUser = NotStarted; strokes = []; loadedPictures = NotStarted } |> Nav.nav onload
+    {   alias = ""
+        currentUser = NotStarted
+        strokes = []
+        loadedPictures = NotStarted
+        pubsubConnection = None
+    } |> Nav.nav onload
 
 let view (model:Model) dispatch =
     class' "main" Html.div [

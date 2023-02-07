@@ -42,8 +42,8 @@ module API =
     [<FunctionName("ReadData")>]
     let ReadData ([<HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "ReadData/{id}")>] req: HttpRequest) (log: ILogger)
         ([<CosmosDB(
-            databaseName = "%Database%",
-            containerName = "%Container%",
+            databaseName = "POC1",
+            containerName = "SavedPictures",
             Connection = "CosmosDbConnectionString",
             SqlQuery ="SELECT * FROM c WHERE c.tag={id} ORDER BY c._ts")>] data: SavedPicture seq)
         =
@@ -64,8 +64,8 @@ module API =
     [<FunctionName("WriteData")>]
     let WriteData ([<HttpTrigger(AuthorizationLevel.Anonymous, "post")>] req: HttpRequest) (log: ILogger)
         ([<CosmosDB(
-            databaseName = "%Database%",
-            containerName = "%Container%",
+            databaseName = "POC1",
+            containerName = "SavedPictures",
             CreateIfNotExists = true,
             PartitionKey = "/id",
             Connection = "CosmosDbConnectionString")>] output: IAsyncCollector<SavedPicture> )

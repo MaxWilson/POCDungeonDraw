@@ -5,6 +5,10 @@ let thunk v _ = v
 let thunk1 f x _ = f x
 let thunk2 f x y = f x y
 let notImpl msg = failwith $"Not implemented! Talk to Max if you want this feature. {msg}"
+let shouldntHappen data =
+    System.Console.WriteLine(data :> obj)
+    failwith $"This shouldn't happen. There must be a bug. {data}"
+let inline breakHere() = System.Diagnostics.Debugger.Break()
 let tuple2 x y = x,y
 let flip f x y = f y x
 let rand = System.Random()

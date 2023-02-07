@@ -3,24 +3,33 @@
 open Fable.Core
 open Browser.Types
 open Fable.Core.JsInterop
+open Thoth.Json
 
 type PubSubMessage = {
-    message: string
+    ``type``: string
+    data: string option
     }
 let mutable socket: WebSocket option = None
 
+[<Emit("new WebSocket($0, $1)")>]
+let createSocket clientUrl protocol : WebSocket = jsNative
+
 let connect(clientUrl, groupName:string, onOpen, (onMsg: string -> unit)) =
+    printfn "Connecting to pubsub!"
     let isConnected =
         match socket with
         | None -> false
         | Some socket -> socket.readyState = WebSocketState.OPEN
-    let s = (obj() :?> WebSocketType).Create (clientUrl, U2.Case1 "json.webpubsub.azure.v1")
+    let s = createSocket clientUrl "json.webpubsub.azure.v1"
     s.onmessage <-
         fun (event: MessageEvent) ->
             if event.``type`` = "message" then
-                printfn $"Received message: '{event.data}'"
-                System.Console.WriteLine(event.data)
-                event.data |> onMsg
+                match Decode.Auto.fromString (event.data |> unbox) with
+                | Ok (message: PubSubMessage) when message.``type`` = "message" ->
+                    printfn $"Received message: '{message.data}'"
+                    System.Console.WriteLine(message.data)
+                    message.data |> unbox |> onMsg
+                | _ -> () // ignore. It's not user data.
     s.onopen <-
         fun _ ->
             printfn "Connected to pubsub"
@@ -28,8 +37,9 @@ let connect(clientUrl, groupName:string, onOpen, (onMsg: string -> unit)) =
             s.send({| ``type`` = "joinGroup"; group = groupName |})
     s.onclose <-
         fun _ ->
+            breakHere()
             printfn "Disconnecting from pubsub"
-            socket <- None
+            //socket <- None
     s.onerror <-
         fun (event: Event) ->
             printfn $"Pubsub error: '{event}'"
@@ -37,8 +47,7 @@ let connect(clientUrl, groupName:string, onOpen, (onMsg: string -> unit)) =
     socket <- Some s
     let transmit jsonTxt =
         s.send({| ``type`` = "sendToGroup"; group = groupName; noEcho = true; dataType = "text"; data = jsonTxt |})
-    fun s.send
-
+    transmit
 
 (* TEMPLATE JavaScript (imperative)
   const isConnected = webSocket?.readyState === WebSocket.OPEN;
