@@ -2,15 +2,43 @@
 
 open Fable.Core
 open Browser.Types
+open Fable.Core.JsInterop
 
-let socket: WebSocket option = None
+type PubSubMessage = {
+    message: string
+    }
+let mutable socket: WebSocket option = None
 
-let tryConnect(clientUrl) =
+let connect(clientUrl, groupName:string, onOpen, (onMsg: string -> unit)) =
     let isConnected =
         match socket with
         | None -> false
         | Some socket -> socket.readyState = WebSocketState.OPEN
-    ()
+    let s = (obj() :?> WebSocketType).Create (clientUrl, U2.Case1 "json.webpubsub.azure.v1")
+    s.onmessage <-
+        fun (event: MessageEvent) ->
+            if event.``type`` = "message" then
+                printfn $"Received message: '{event.data}'"
+                System.Console.WriteLine(event.data)
+                event.data |> onMsg
+    s.onopen <-
+        fun _ ->
+            printfn "Connected to pubsub"
+            onOpen()
+            s.send({| ``type`` = "joinGroup"; group = groupName |})
+    s.onclose <-
+        fun _ ->
+            printfn "Disconnecting from pubsub"
+            socket <- None
+    s.onerror <-
+        fun (event: Event) ->
+            printfn $"Pubsub error: '{event}'"
+            System.Console.WriteLine(event)
+    socket <- Some s
+    let transmit jsonTxt =
+        s.send({| ``type`` = "sendToGroup"; group = groupName; noEcho = true; dataType = "text"; data = jsonTxt |})
+    fun s.send
+
 
 (* TEMPLATE JavaScript (imperative)
   const isConnected = webSocket?.readyState === WebSocket.OPEN;
