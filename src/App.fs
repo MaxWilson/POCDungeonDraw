@@ -113,12 +113,23 @@ let update msg model =
     | ChangeColor color ->
         { model with brushColor = color }, []
 
+let joinChannel channelName dispatch = promise {
+    let! clientUrlResponse = Fetch.fetch $"/api/CreateTokenRequest/dnd/{channelName}/" []
+    let! clientUrl = clientUrlResponse.text()
+    let onMsg (txt: string) =
+        match txt |> Decode.Auto.fromString with
+        | Error e -> shouldntHappen e
+        | Ok v -> v |> RemoteReceiveGraphics |> dispatch
+    WebSync.connect(clientUrl, channelName, ignore, onMsg) |> Connected |> dispatch
+    }
+
 let save model dispatch fileName =
     promise {
         let data = {| id = "ignore"; owner = ""; tag = fileName; payload = model.strokes |}
         try
             do! Thoth.Fetch.Fetch.post($"/api/WriteData", data)
             SetLocation fileName |> dispatch
+            do! joinChannel fileName dispatch
         with
         | err when err.Message.Contains "401 Unauthorized" ->
             Browser.Dom.window.alert($"Sorry, you can't save until you log in. Please hit the 'Login' button at the top.")
@@ -135,13 +146,7 @@ let load model dispatch fileName =
         match data with
         | Ok matches ->
             ReceiveSavedPictures (Ready matches) |> dispatch
-            let! clientUrlResponse = Fetch.fetch $"/api/CreateTokenRequest/dnd/{fileName}/" []
-            let! clientUrl = clientUrlResponse.text()
-            let onMsg (txt: string) =
-                match txt |> Decode.Auto.fromString with
-                | Error e -> shouldntHappen e
-                | Ok v -> v |> RemoteReceiveGraphics |> dispatch
-            WebSync.connect(clientUrl, fileName, ignore, onMsg) |> Connected |> dispatch
+            do! joinChannel fileName dispatch
         | Error err ->
             shouldntHappen err
         }
@@ -257,6 +262,8 @@ Program.mkProgram init update view
                     |> Ready |> ReceiveIdentity
                 | Error err -> ReceiveIdentity (Ready (Some (Erroneous, err.ToString())))
                 |> dispatch
+                if model.pubsubConnection.IsNone then
+                    do! joinChannel "default" dispatch
             }
             |> Promise.start
             )
