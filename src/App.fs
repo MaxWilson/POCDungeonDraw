@@ -25,6 +25,7 @@ type Model = {
     alias: string; currentUser: Identity Deferred;
     strokes: GraphicElement list; loadedPictures: SavedPicture list Deferred
     pubsubConnection: (string -> unit) option
+    brushColor: string
     }
 type Msg =
     | SetAlias of string
@@ -36,6 +37,7 @@ type Msg =
     | ResetToPicture of SavedPicture
     | Connected of (string -> unit)
     | RemoteReceiveGraphics of GraphicElement list
+    | ChangeColor of string
 
 let class' (className: string) ctor (elements: _ seq) = ctor [prop.className className; prop.children elements]
 let navigateTo (url: string) =
@@ -63,19 +65,18 @@ let TextEntry dispatch =
             ]
         ]
 
-let colorOf ix =
-    let colors = [
-        "red"
-        "yellow"
-        "orange"
-        "green"
-        "blue"
-        "indigo"
-        "violet"
-        "black"
-        "white"
-        ]
-    colors[ix % colors.Length]
+let colors = [
+    "red"
+    "yellow"
+    "orange"
+    "green"
+    "blue"
+    "indigo"
+    "violet"
+    "black"
+    "white"
+    ]
+
 let update msg model =
     match msg with
     | ReceiveIdentity id -> { model with currentUser = id }, []
@@ -90,7 +91,7 @@ let update msg model =
     | SetAlias v -> { model with alias = v }, []
     | SetLocation v -> model, Cmd.navigate v
     | ReceiveStroke stroke ->
-        let stroke' = Stroke(stroke, colorOf model.strokes.Length)
+        let stroke' = Stroke(stroke, model.brushColor)
         match model.pubsubConnection with None -> () | Some transmit -> Encode.Auto.toString(0, [stroke']) |> transmit
         { model with strokes = model.strokes@[stroke'] }, []
     | ReceiveText txt ->
@@ -102,13 +103,15 @@ let update msg model =
                         | Text(_, point, _) -> createObj ["x", point.x; "y", (point.y + 50. |> box)] |> unbox |> Some) with
             | Some point -> point
             | None -> createObj ["x", 0.; "y", 0.] |> unbox
-        let txt = Text(txt, coord, colorOf model.strokes.Length)
+        let txt = Text(txt, coord, model.brushColor)
         match model.pubsubConnection with None -> () | Some transmit -> Encode.Auto.toString(0, [txt]) |> transmit
         { model with strokes = model.strokes@[txt] }, []
     | RemoteReceiveGraphics graphics ->
         { model with strokes = model.strokes@graphics }, []
     | Connected send ->
         { model with pubsubConnection = Some send }, []
+    | ChangeColor color ->
+        { model with brushColor = color }, []
 
 let save model dispatch fileName =
     promise {
@@ -161,6 +164,7 @@ let init (onload:NavCmd) =
         strokes = []
         loadedPictures = NotStarted
         pubsubConnection = None
+        brushColor = colors |> chooseRandom
     } |> Nav.nav onload
 
 let view (model:Model) dispatch =
@@ -174,7 +178,7 @@ let view (model:Model) dispatch =
             match model.loadedPictures with
             | InProgress -> Html.div "Loading pictures, please wait..."
             | _ ->
-                SketchPad(dispatch << ReceiveStroke)
+                SketchPad model.brushColor (dispatch << ReceiveStroke)
                 Svg.svg [
                     svg.className "display"
                     svg.viewBox(0, 0, 400, 300)
@@ -206,6 +210,12 @@ let view (model:Model) dispatch =
                     ]
             ]
         TextEntry dispatch
+        class' "colorDisplay" Html.div [
+            for color in colors do
+                let id = $"chk{color}"
+                Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.id id; prop.onClick (fun _ -> dispatch (ChangeColor color))]
+                Html.label [prop.htmlFor id; prop.text color]
+            ]
         SaveButton (save model dispatch)
 
         Counter()

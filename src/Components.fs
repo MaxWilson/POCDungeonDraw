@@ -38,7 +38,7 @@ open SketchCanvas
 open Fable.Core.JsInterop
 
 [<ReactComponent>]
-let SketchPad receiveStroke =
+let SketchPad strokeColor receiveStroke =
     let canvas = React.useRef(None)
     let html, htmlUpdate = React.useState "Press the Export SVG button"
     let lastPath, lastPathUpdate = React.useState None
@@ -46,7 +46,7 @@ let SketchPad receiveStroke =
     sketch.create [
         sketch.ref canvas
         sketch.style [style.border "0.06em dashed purple"]
-        sketch.height 300; sketch.width 300; sketch.strokeWidth 4; sketch.strokeColor "blue"
+        sketch.height 300; sketch.width 300; sketch.strokeWidth 4; sketch.strokeColor strokeColor
         sketch.onChange (fun paths -> lastPathUpdate (if paths.Length > 0 then Some paths[-1] else None))
         sketch.onStroke (fun stroke -> (if stroke.paths.Length > 1 then receiveStroke stroke); lastStrokeUpdate stroke)
         ]
