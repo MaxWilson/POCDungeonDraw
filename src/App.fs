@@ -66,15 +66,16 @@ let TextEntry dispatch =
         ]
 
 let colors = [
-    "red"
-    "yellow"
-    "orange"
-    "green"
-    "blue"
-    "indigo"
-    "violet"
-    "black"
-    "white"
+    "Red"
+    "Yellow"
+    "Orange"
+    "Green"
+    "Blue"
+    "Indigo"
+    "Violet"
+    "Black"
+    "Grey"
+    "White"
     ]
 
 let update msg model =
@@ -218,8 +219,10 @@ let view (model:Model) dispatch =
         class' "colorDisplay" Html.div [
             for color in colors do
                 let id = $"chk{color}"
-                Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.id id; prop.onClick (fun _ -> dispatch (ChangeColor color))]
-                Html.label [prop.htmlFor id; prop.text color]
+                Html.div [
+                    Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.id id; prop.onClick (fun _ -> dispatch (ChangeColor color))]
+                    Html.label [prop.htmlFor id; prop.text color]
+                    ]
             ]
         SaveButton (save model dispatch)
 
