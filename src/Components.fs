@@ -52,6 +52,10 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
     let (windowHeight, windowWidth), _ = React.useState ((window.innerHeight - 250., window.innerWidth))
     let (currentLine: LineData option), setCurrentLine = React.useState None
     let isDrawing = React.useRef false
+    let reset _ : System.IDisposable option =
+        setCurrentLine None
+        None
+    React.useEffect(reset, [| box strokeColor; brushSize; existing|])
     let widthOf = function
         | "Small" -> 2
         | "Medium" -> 5
@@ -82,7 +86,6 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
             // turn it into a graphic element and send it
             receiveStroke ({ points = line.points |> List.rev |> List.collect (fun (x,y) -> [x;y]) |> Array.ofList })
         | None -> ()
-        setCurrentLine None
         e?evt?preventDefault()
 
     let renderGraphicElement (ix:int) =
@@ -134,11 +137,12 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
         onTouchMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onTouchEnd={handleMouseUp}
+        onTouchCancel={fun _ -> setCurrentLine None; isDrawing.current <- false}
       >
         <Layer>
           <Text text="Just start drawing" x={5} y={30} />
           {existing |> List.mapi renderGraphicElement |> Array.ofList}
-          {[match currentLine with None -> () | Some line -> makeLineFromCurrent line]}
+          {[match currentLine with Some line when isDrawing.current -> makeLineFromCurrent line | _ -> ()]}
         </Layer>
       </Stage>
     </div>
