@@ -41,6 +41,7 @@ open SketchCanvas
 open Fable.Core.JsInterop
 open Fable.Core
 open Browser
+open Browser.Types
 
 let toReactElement (element: JSX.Element): ReactElement = unbox element
 
@@ -48,6 +49,7 @@ type LineData = { color: string; points: (float*float) list }
 
 [<ReactComponent>]
 let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement list) receiveStroke =
+    let (windowHeight, windowWidth), _ = React.useState ((window.innerHeight - 250., window.innerWidth))
     let (currentLine: LineData option), setCurrentLine = React.useState None
     let isDrawing = React.useRef false
     let widthOf = function
@@ -55,13 +57,14 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
         | "Medium" -> 5
         | "Large" -> 12
         | "Huge" | _ -> 30
-    let handleMouseDown e =
+    let handleMouseDown (e:Event) =
         isDrawing.current <- true
-        let pos = e?target?getStage()?getPointerPosition()
+        let pos = e.target?getStage()?getPointerPosition()
         setCurrentLine(Some {color = strokeColor; points = [pos?x, pos?y]}) // start a new line with only one point
-    let handleMouseMove e =
+        e?evt?preventDefault()
+    let handleMouseMove (e:Event) =
         if isDrawing.current then
-            let stage = e?target?getStage()
+            let stage = e.target?getStage()
             let point = stage?getPointerPosition()
             match currentLine with
             | Some current ->
@@ -70,7 +73,8 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
                 let current' = { current with points = (x,y)::current.points }
                 current' |> Some |> setCurrentLine
             | None -> ()
-    let handleMouseUp e =
+        e?evt?preventDefault()
+    let handleMouseUp (e:Event) =
         isDrawing.current <- false
         match currentLine with
         | Some line ->
@@ -79,6 +83,8 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
             receiveStroke ({ points = line.points |> List.rev |> List.collect (fun (x,y) -> [x;y]) |> Array.ofList })
         | None -> ()
         setCurrentLine None
+        e?evt?preventDefault()
+
     let renderGraphicElement (ix:int) =
         function
         | Stroke(stroke,color, brushSize) ->
@@ -120,8 +126,8 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
     import {{ Stage, Layer, Line, Text }} from 'react-konva';
     <div>
       <Stage
-        width={window.innerWidth}
-        height={window.innerHeight - 200.}
+        width={windowWidth}
+        height={windowHeight}
         onMouseDown={handleMouseDown}
         onTouchStart={handleMouseDown}
         onMouseMove={handleMouseMove}
