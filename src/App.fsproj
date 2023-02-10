@@ -15,7 +15,8 @@
     <Compile Include="WebSync.fs" />
     <None Include="Binding.Ably.fs" />
     <Compile Include="Components.fs" />
-    <Compile Include="App.fs" />
+    <Compile Include="Home.fs" />
+    <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Browser.Dom" Version="2.10.1" />
