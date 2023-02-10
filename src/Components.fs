@@ -39,33 +39,18 @@ open Fable.Core.JsInterop
 open Fable.Core
 open Browser
 
-[<ReactComponent>]
-let SketchPad0 strokeColor receiveStroke =
-    let canvas = React.useRef(None)
-    let html, htmlUpdate = React.useState "Press the Export SVG button"
-    let lastPath, lastPathUpdate = React.useState None
-    let lastStroke, lastStrokeUpdate = React.useState { paths = Array.empty }
-    sketch.create [
-        sketch.ref canvas
-        sketch.style [style.border "0.06em dashed purple"]
-        sketch.height 300; sketch.width 300; sketch.strokeWidth 4; sketch.strokeColor strokeColor
-        sketch.onChange (fun paths -> lastPathUpdate (if paths.Length > 0 then Some paths[-1] else None))
-        sketch.onStroke (fun stroke -> (if stroke.paths.Length > 1 then receiveStroke stroke); lastStrokeUpdate stroke)
-        ]
-
 let toReactElement (element: JSX.Element): ReactElement = unbox element
 
 type LineData = { color: string; points: (float * float) list }
 
 [<ReactComponent>]
-let SketchPad strokeColor receiveStroke =
+let SketchPad (strokeColor:string) receiveStroke =
     let lines, setLines = React.useState []
-    let brush, setBrush = React.useState "black"
     let isDrawing = React.useRef false
     let handleMouseDown e =
         isDrawing.current <- true
         let pos = e?target?getStage()?getPointerPosition()
-        setLines([{color = brush; points = [pos?x, pos?y]}]@lines) // start a new line with only one point
+        setLines([{color = strokeColor; points = [pos?x, pos?y]}]@lines) // start a new line with only one point
     let handleMouseMove e =
         if isDrawing.current then
             let stage = e?target?getStage()
@@ -108,15 +93,6 @@ let SketchPad strokeColor receiveStroke =
           {lines |> List.mapi makeLine |> Array.ofList}
         </Layer>
       </Stage>
-      <select
-        value={brush}
-        onChange={fun event ->
-          setBrush(event?target?value)
-        }
-      >
-        <option value="pen">Pen</option>
-        <option value="eraser">Eraser</option>
-      </select>
     </div>
     """
     |> toReactElement
