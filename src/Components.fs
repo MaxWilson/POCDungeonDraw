@@ -36,9 +36,10 @@ module SketchCanvas =
         static member inline borderRadius (v:string) = Interop.mkStyle "borderRadius" v
 open SketchCanvas
 open Fable.Core.JsInterop
+open Fable.Core
 
 [<ReactComponent>]
-let SketchPad strokeColor receiveStroke =
+let SketchPad0 strokeColor receiveStroke =
     let canvas = React.useRef(None)
     let html, htmlUpdate = React.useState "Press the Export SVG button"
     let lastPath, lastPathUpdate = React.useState None
@@ -51,37 +52,19 @@ let SketchPad strokeColor receiveStroke =
         sketch.onStroke (fun stroke -> (if stroke.paths.Length > 1 then receiveStroke stroke); lastStrokeUpdate stroke)
         ]
 
-[<ReactComponent>]
-let Counter () =
-    let (count, setCount) = React.useState (0)
-
-    Html.div [ Html.h1 count
-               Html.button [ prop.text "Increment"
-                             prop.onClick (fun _ -> setCount (count + 1)) ] ]
+let toReactElement (element: JSX.Element): ReactElement = unbox element
 
 [<ReactComponent>]
-let Message (tag:string) =
-    let (message, setMessage) = React.useState (NotStarted)
-    Html.div [  Html.button [   prop.text "Get a message from the API"
-                                prop.onClick
-                                    (fun _ ->
-                                        promise {
-                                            setMessage InProgress
-                                            let! message =
-                                                Fetch.get (
-                                                    $"/api/GetMessage" + (if tag <> "" then "?name=" + tag else ""),
-                                                    headers = [ HttpRequestHeaders.Accept "application/json" ]
-                                                )
-
-                                            setMessage (message |> Ready)
-                                            return ()
-                                        }
-                                        |> ignore) ]
-                match message with
-                | NotStarted -> Html.none
-                | InProgress -> Html.div "Executing..."
-                | Ready (msg:string) -> Html.p msg
-            ]
+let SketchPad strokeColor receiveStroke =
+    JSX.jsx $"""<div class="stacked">
+        <button>Hello there!</button>
+        <button>Goodbyte!</button>
+        <button>I don't know why you say goodbye</button>
+        <button>I say</button>
+        <button>Hello!</button>
+    </div>
+    """
+    |> toReactElement
 
 [<ReactComponent>]
 let SaveButton saveCmd =

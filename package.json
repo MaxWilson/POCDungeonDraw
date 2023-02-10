@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "start": "dotnet fable watch src --sourceMaps --run vite",
-    "build": "dotnet fable src --sourceMaps --run vite build",
+    "start": "dotnet fable watch src -e .jsx --sourceMaps --run vite",
+    "build": "dotnet fable src -e .jsx --sourceMaps --run vite build",
     "serve": "vite serve"
   },
   "devDependencies": {

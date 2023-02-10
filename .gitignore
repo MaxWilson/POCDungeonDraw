@@ -13,3 +13,5 @@ paket-files
 publish
 *.exe
 !.gitignore
+*.jsx
+*.jsx.map
