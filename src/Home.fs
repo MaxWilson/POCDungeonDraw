@@ -1,6 +1,5 @@
 ﻿module Home
 
-
 open Browser.Dom
 
 open Feliz

@@ -18,16 +18,13 @@ type PubSubPayload = {
     }
 let mutable socket: WebSocket option = None
 
-[<Emit("new WebSocket($0, $1)")>]
-let createSocket clientUrl protocol : WebSocket = jsNative
-
 let connect(clientUrl, groupName:string, onOpen, (onMsg: string -> unit)) =
     printfn "Connecting to pubsub!"
     let isConnected =
         match socket with
         | None -> false
         | Some socket -> socket.readyState = WebSocketState.OPEN
-    let s = createSocket clientUrl "json.webpubsub.azure.v1"
+    let s = Browser.WebSocket.WebSocket.Create(clientUrl, U2.Case1 "json.webpubsub.azure.v1")
     s.onmessage <-
         fun (event: MessageEvent) ->
             if event.``type`` = "message" then

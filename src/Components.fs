@@ -117,8 +117,11 @@ let SketchPad (strokeColor:string) (existing: GraphicElement list) receiveStroke
         width={window.innerWidth}
         height={window.innerHeight - 200.}
         onMouseDown={handleMouseDown}
-        onMousemove={handleMouseMove}
-        onMouseup={handleMouseUp}
+        onTouchStart={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onTouchMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onTouchEnd={handleMouseUp}
       >
         <Layer>
           <Text text="Just start drawing" x={5} y={30} />
