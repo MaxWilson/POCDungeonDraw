@@ -5,6 +5,15 @@ open Elmish.Navigation
 open Elmish.React
 open Home
 
+module Cmd =
+    let ofSub f =
+        [[], fun dispatch ->
+                f dispatch
+                { new System.IDisposable with
+                               member this.Dispose(): unit = ()
+                               }
+            ]
+
 Program.mkProgram init update view
     |> Program.withSubscription(fun model ->
         Cmd.ofSub(fun dispatch ->

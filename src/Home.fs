@@ -164,7 +164,7 @@ module Nav =
         match navCmd with
         | HomeScreen -> model, Cmd.Empty
         | Load pictureName ->
-            model, Cmd.ofSub (fun dispatch -> load model dispatch pictureName |> Promise.start)
+            model, [fun dispatch -> load model dispatch pictureName |> Promise.start]
 
 let init (onload:NavCmd) =
     {   alias = ""
@@ -231,10 +231,10 @@ let view (model:Model) dispatch =
         TextEntry dispatch
         class' "colorDisplay" Html.div [
             for color in colors do
-                let id = $"chk{color}"
+                let chkId = $"chk{color}"
                 Html.div [
-                    Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.id id; prop.onClick (fun _ -> dispatch (ChangeColor color))]
-                    Html.label [prop.htmlFor id; prop.text color]
+                    Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.readOnly true; prop.id chkId; prop.onClick (fun _ -> dispatch (ChangeColor color))]
+                    Html.label [prop.htmlFor chkId; prop.text color]
                     ]
             ]
         SaveButton (save model dispatch)
