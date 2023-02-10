@@ -37,6 +37,7 @@ type Msg =
     | Connected of channelName: string * connection:(string -> unit)
     | RemoteReceiveGraphics of GraphicElement list
     | ChangeColor of string
+    | ChangeBrushSize of string
 
 let class' (className: string) ctor (elements: _ seq) = ctor [prop.className className; prop.children elements]
 let navigateTo (url: string) =
@@ -98,7 +99,7 @@ let update msg model =
     | SetAlias v -> { model with alias = v }, []
     | SetLocation v -> model, Cmd.navigate v
     | ReceiveStroke stroke ->
-        let stroke' = Stroke(stroke, model.brushColor)
+        let stroke' = Stroke(stroke, model.brushColor, model.brushSize)
         match model.pubsubConnection with None -> () | Some transmit -> Encode.Auto.toString(0, [stroke']) |> transmit
         { model with strokes = model.strokes@[stroke'] }, []
     | ReceiveText txt ->
@@ -106,7 +107,7 @@ let update msg model =
         let coord =
             match model.strokes
                     |> List.tryPick (function
-                        | Stroke(stroke,_) ->
+                        | Stroke(stroke,_,_) ->
                             if stroke.points.Length >= 2 then
                                 { x = stroke.points[0]; y = stroke.points[1] } |> Some
                             else None
@@ -122,6 +123,8 @@ let update msg model =
         { model with channelName = Some channelName; pubsubConnection = Some send }, []
     | ChangeColor color ->
         { model with brushColor = color }, []
+    | ChangeBrushSize sz ->
+        { model with brushSize = sz }, []
 
 let joinChannel channelName dispatch = promise {
     let! clientUrlResponse = Fetch.fetch $"/api/CreateTokenRequest/dnd/{channelName}/" []
@@ -181,6 +184,7 @@ let init (onload:NavCmd) =
         pubsubConnection = None
         channelName = None
         brushColor = colors |> chooseRandom
+        brushSize = "Medium"
     } |> Nav.nav onload
 
 let view (model:Model) dispatch =
@@ -204,7 +208,7 @@ let view (model:Model) dispatch =
             match model.loadedPictures with
             | InProgress -> Html.div "Loading pictures, please wait..."
             | _ ->
-                SketchPad model.brushColor model.strokes (dispatch << ReceiveStroke)
+                SketchPad (model.brushColor, model.brushSize) model.strokes (dispatch << ReceiveStroke)
             ]
         TextEntry dispatch
         class' "colorDisplay" Html.div [
@@ -219,7 +223,7 @@ let view (model:Model) dispatch =
             for sz in sizes do
                 let chkId = $"chk{sz}"
                 Html.div [
-                    Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.readOnly true; prop.id chkId; prop.onClick (fun _ -> dispatch (ChangeColor color))]
+                    Html.input [prop.type'.checkbox; prop.isChecked (model.brushSize = sz); prop.readOnly true; prop.id chkId; prop.onClick (fun _ -> dispatch (ChangeBrushSize sz))]
                     Html.label [prop.htmlFor chkId; prop.text sz]
                     ]
             ]

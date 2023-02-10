@@ -7,7 +7,7 @@ type 't Deferred = NotStarted | InProgress | Ready of 't
 type Point = { x: float; y: float }
 type Stroke = { points: float array } // flattened coordinate list, e.g. [x1;y1;x2;y2] and so on. Perf optimization relative to flattening with every render.
 type GraphicElement =
-    | Stroke of Stroke * color: string
+    | Stroke of Stroke * color: string * brushSize: string
     | Text of string * Point * color: string
 
 module SketchCanvas =
@@ -47,9 +47,14 @@ let toReactElement (element: JSX.Element): ReactElement = unbox element
 type LineData = { color: string; points: (float*float) list }
 
 [<ReactComponent>]
-let SketchPad (strokeColor:string) (existing: GraphicElement list) receiveStroke =
+let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement list) receiveStroke =
     let (currentLine: LineData option), setCurrentLine = React.useState None
     let isDrawing = React.useRef false
+    let widthOf = function
+        | "Small" -> 2
+        | "Medium" -> 5
+        | "Large" -> 12
+        | "Huge" | _ -> 30
     let handleMouseDown e =
         isDrawing.current <- true
         let pos = e?target?getStage()?getPointerPosition()
@@ -73,15 +78,16 @@ let SketchPad (strokeColor:string) (existing: GraphicElement list) receiveStroke
             // turn it into a graphic element and send it
             receiveStroke ({ points = line.points |> List.rev |> List.collect (fun (x,y) -> [x;y]) |> Array.ofList })
         | None -> ()
+        setCurrentLine None
     let renderGraphicElement (ix:int) =
         function
-        | Stroke(stroke,color) ->
+        | Stroke(stroke,color, brushSize) ->
             JSX.jsx $"""
                 <Line
                         key={ix}
                         points={stroke.points}
                         stroke={color}
-                        strokeWidth={5}
+                        strokeWidth={widthOf brushSize}
                         tension={0.5}
                         lineCap="round"
                         lineJoin="round"
@@ -100,7 +106,7 @@ let SketchPad (strokeColor:string) (existing: GraphicElement list) receiveStroke
                   key="current"
                   points={line.points |> List.collect(fun (x,y) -> [x;y]) |> Array.ofList}
                   stroke={line.color}
-                  strokeWidth={5}
+                  strokeWidth={widthOf brushSize}
                   tension={0.5}
                   lineCap="round"
                   lineJoin="round"
