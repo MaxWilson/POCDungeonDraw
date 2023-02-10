@@ -14,9 +14,6 @@ open Thoth.Json
 
 importSideEffects "./styles.sass"
 
-type GraphicElement =
-    | Stroke of Stroke * color: string
-    | Text of string * Point * color: string
 type 't Deferred = NotStarted | InProgress | Ready of 't
 type IdentityProvider = Facebook | AAD | Erroneous
 type Identity = (IdentityProvider * string) option
@@ -28,6 +25,7 @@ type Model = {
     pubsubConnection: (string -> unit) option
     channelName: string option
     brushColor: string
+    brushSize: string
     }
 type Msg =
     | SetAlias of string
@@ -77,7 +75,14 @@ let colors = [
     "Violet"
     "Black"
     "Grey"
-    "White"
+    "Eraser"
+    ]
+
+let sizes = [
+    "Small"
+    "Medium"
+    "Large"
+    "Huge"
     ]
 
 let update msg model =
@@ -100,9 +105,12 @@ let update msg model =
     | ReceiveText txt ->
         // place the text near the start of a recent line
         let coord =
-            match model.strokes |> List.rev
+            match model.strokes
                     |> List.tryPick (function
-                        | Stroke(stroke,_) -> stroke.paths |> Array.tryHead
+                        | Stroke(stroke,_) ->
+                            if stroke.points.Length >= 2 then
+                                { x = stroke.points[0]; y = stroke.points[1] } |> Some
+                            else None
                         | Text(_, point, _) -> createObj ["x", point.x; "y", (point.y + 50. |> box)] |> unbox |> Some) with
             | Some point -> point
             | None -> createObj ["x", 0.; "y", 0.] |> unbox
@@ -197,36 +205,7 @@ let view (model:Model) dispatch =
             match model.loadedPictures with
             | InProgress -> Html.div "Loading pictures, please wait..."
             | _ ->
-                SketchPad model.brushColor (dispatch << ReceiveStroke)
-                Svg.svg [
-                    svg.className "display"
-                    svg.viewBox(0, 0, 400, 300)
-                    svg.children [
-                        for element in model.strokes do
-                            match element with
-                            | Stroke(stroke, color) ->
-                                Svg.path [
-                                        [match stroke.paths |> List.ofArray with
-                                                | first :: rest ->
-                                                    'M', [[first.x; first.y]]
-                                                    yield! rest |> List.map (fun p -> 'L', [[p.x; p.y]])
-                                                | [] -> ()]
-                                        |> svg.d
-                                        svg.stroke color
-                                        svg.strokeWidth 4
-                                        svg.fill "none"
-                                    ]
-                            | Text(text, point, color) ->
-                                Svg.text [
-                                    svg.x point.x
-                                    svg.y point.y
-                                    svg.text text
-                                    svg.stroke color
-                                    svg.fontSize 40
-                                    svg.fill color
-                                    ]
-                        ]
-                    ]
+                SketchPad model.brushColor model.strokes (dispatch << ReceiveStroke)
             ]
         TextEntry dispatch
         class' "colorDisplay" Html.div [
@@ -235,6 +214,14 @@ let view (model:Model) dispatch =
                 Html.div [
                     Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.readOnly true; prop.id chkId; prop.onClick (fun _ -> dispatch (ChangeColor color))]
                     Html.label [prop.htmlFor chkId; prop.text color]
+                    ]
+            ]
+        class' "colorDisplay" Html.div [
+            for sz in sizes do
+                let chkId = $"chk{sz}"
+                Html.div [
+                    Html.input [prop.type'.checkbox; prop.isChecked (model.brushColor = color); prop.readOnly true; prop.id chkId; prop.onClick (fun _ -> dispatch (ChangeColor color))]
+                    Html.label [prop.htmlFor chkId; prop.text sz]
                     ]
             ]
         SaveButton (save model dispatch)

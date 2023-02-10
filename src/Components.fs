@@ -5,7 +5,10 @@ open Thoth.Fetch
 
 type 't Deferred = NotStarted | InProgress | Ready of 't
 type Point = { x: float; y: float }
-type Stroke = { paths: Point array }
+type Stroke = { points: float array } // flattened coordinate list, e.g. [x1;y1;x2;y2] and so on. Perf optimization relative to flattening with every render.
+type GraphicElement =
+    | Stroke of Stroke * color: string
+    | Text of string * Point * color: string
 
 module SketchCanvas =
     open Feliz
@@ -41,32 +44,61 @@ open Browser
 
 let toReactElement (element: JSX.Element): ReactElement = unbox element
 
-type LineData = { color: string; points: (float * float) list }
+type LineData = { color: string; points: (float*float) list }
 
 [<ReactComponent>]
-let SketchPad (strokeColor:string) receiveStroke =
-    let lines, setLines = React.useState []
+let SketchPad (strokeColor:string) (existing: GraphicElement list) receiveStroke =
+    let (currentLine: LineData option), setCurrentLine = React.useState None
     let isDrawing = React.useRef false
     let handleMouseDown e =
         isDrawing.current <- true
         let pos = e?target?getStage()?getPointerPosition()
-        setLines([{color = strokeColor; points = [pos?x, pos?y]}]@lines) // start a new line with only one point
+        setCurrentLine(Some {color = strokeColor; points = [pos?x, pos?y]}) // start a new line with only one point
     let handleMouseMove e =
         if isDrawing.current then
             let stage = e?target?getStage()
             let point = stage?getPointerPosition()
-            match lines with
-            | current::priors ->
-                let current' = { current with points = current.points@[point?x, point?y]}
-                current'::priors |> setLines
-            | [] -> shouldntHappen()
+            match currentLine with
+            | Some current ->
+                let x: float = point?x
+                let y: float = point?y
+                let current' = { current with points = (x,y)::current.points }
+                current' |> Some |> setCurrentLine
+            | None -> ()
     let handleMouseUp e =
         isDrawing.current <- false
-    let makeLine ix (line: LineData) =
+        match currentLine with
+        | Some line ->
+            let points1 = line.points |> Array.ofList |> Array.rev
+            // turn it into a graphic element and send it
+            receiveStroke ({ points = line.points |> List.rev |> List.collect (fun (x,y) -> [x;y]) |> Array.ofList })
+        | None -> ()
+    let renderGraphicElement (ix:int) =
+        function
+        | Stroke(stroke,color) ->
+            JSX.jsx $"""
+                <Line
+                        key={ix}
+                        points={stroke.points}
+                        stroke={color}
+                        strokeWidth={5}
+                        tension={0.5}
+                        lineCap="round"
+                        lineJoin="round"
+                        globalCompositeOperation=
+                        {
+                            if color = "Eraser" then "destination-out" else "source-over"
+                        }
+                    />
+            """
+        | Text(txt, point, color) ->
+            JSX.jsx $"""<Text text={txt} x={point.x} y={point.y} stroke={color} fill={color} fontSize={40}/>
+                """
+    let makeLineFromCurrent (line: LineData) =
         JSX.jsx $"""
             <Line
-                  key={ix}
-                  points={line.points |> List.collect(fun(x,y) -> [x;y]) |> Array.ofList}
+                  key="current"
+                  points={line.points |> List.collect(fun (x,y) -> [x;y]) |> Array.ofList}
                   stroke={line.color}
                   strokeWidth={5}
                   tension={0.5}
@@ -74,7 +106,7 @@ let SketchPad (strokeColor:string) receiveStroke =
                   lineJoin="round"
                   globalCompositeOperation=
                   {
-                    if line.color = "eraser" then "destination-out" else "source-over"
+                    if line.color = "Eraser" then "destination-out" else "source-over"
                   }
                 />
         """
@@ -90,7 +122,8 @@ let SketchPad (strokeColor:string) receiveStroke =
       >
         <Layer>
           <Text text="Just start drawing" x={5} y={30} />
-          {lines |> List.mapi makeLine |> Array.ofList}
+          {existing |> List.mapi renderGraphicElement |> Array.ofList}
+          {[match currentLine with None -> () | Some line -> makeLineFromCurrent line]}
         </Layer>
       </Stage>
     </div>
