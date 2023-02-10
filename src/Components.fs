@@ -37,6 +37,7 @@ module SketchCanvas =
 open SketchCanvas
 open Fable.Core.JsInterop
 open Fable.Core
+open Browser
 
 [<ReactComponent>]
 let SketchPad0 strokeColor receiveStroke =
@@ -54,14 +55,68 @@ let SketchPad0 strokeColor receiveStroke =
 
 let toReactElement (element: JSX.Element): ReactElement = unbox element
 
+type LineData = { color: string; points: (float * float) list }
+
 [<ReactComponent>]
 let SketchPad strokeColor receiveStroke =
-    JSX.jsx $"""<div class="stacked">
-        <button>Hello there!</button>
-        <button>Goodbyte!</button>
-        <button>I don't know why you say goodbye</button>
-        <button>I say</button>
-        <button>Hello!</button>
+    let lines, setLines = React.useState []
+    let brush, setBrush = React.useState "black"
+    let isDrawing = React.useRef false
+    let handleMouseDown e =
+        isDrawing.current <- true
+        let pos = e?target?getStage()?getPointerPosition()
+        setLines([{color = brush; points = [pos?x, pos?y]}]@lines) // start a new line with only one point
+    let handleMouseMove e =
+        if isDrawing.current then
+            let stage = e?target?getStage()
+            let point = stage?getPointerPosition()
+            match lines with
+            | current::priors ->
+                let current' = { current with points = current.points@[point?x, point?y]}
+                current'::priors |> setLines
+            | [] -> shouldntHappen()
+    let handleMouseUp e =
+        isDrawing.current <- false
+    let makeLine ix (line: LineData) =
+        JSX.jsx $"""
+            <Line
+                  key={ix}
+                  points={line.points |> List.collect(fun(x,y) -> [x;y]) |> Array.ofList}
+                  stroke={line.color}
+                  strokeWidth={5}
+                  tension={0.5}
+                  lineCap="round"
+                  lineJoin="round"
+                  globalCompositeOperation=
+                  {
+                    if line.color = "eraser" then "destination-out" else "source-over"
+                  }
+                />
+        """
+    JSX.jsx $"""
+    import {{ Stage, Layer, Line, Text }} from 'react-konva';
+    <div>
+      <Stage
+        width={window.innerWidth}
+        height={window.innerHeight - 200.}
+        onMouseDown={handleMouseDown}
+        onMousemove={handleMouseMove}
+        onMouseup={handleMouseUp}
+      >
+        <Layer>
+          <Text text="Just start drawing" x={5} y={30} />
+          {lines |> List.mapi makeLine |> Array.ofList}
+        </Layer>
+      </Stage>
+      <select
+        value={brush}
+        onChange={fun event ->
+          setBrush(event?target?value)
+        }
+      >
+        <option value="pen">Pen</option>
+        <option value="eraser">Eraser</option>
+      </select>
     </div>
     """
     |> toReactElement
