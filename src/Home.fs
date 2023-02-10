@@ -26,6 +26,7 @@ type Model = {
     alias: string; currentUser: Identity Deferred;
     strokes: GraphicElement list; loadedPictures: SavedPicture list Deferred
     pubsubConnection: (string -> unit) option
+    channelName: string option
     brushColor: string
     }
 type Msg =
@@ -36,7 +37,7 @@ type Msg =
     | ReceiveStroke of Stroke
     | ReceiveText of string
     | ResetToPicture of SavedPicture
-    | Connected of (string -> unit)
+    | Connected of channelName: string * connection:(string -> unit)
     | RemoteReceiveGraphics of GraphicElement list
     | ChangeColor of string
 
@@ -110,8 +111,8 @@ let update msg model =
         { model with strokes = model.strokes@[txt] }, []
     | RemoteReceiveGraphics graphics ->
         { model with strokes = model.strokes@graphics }, []
-    | Connected send ->
-        { model with pubsubConnection = Some send }, []
+    | Connected(channelName, send) ->
+        { model with channelName = Some channelName; pubsubConnection = Some send }, []
     | ChangeColor color ->
         { model with brushColor = color }, []
 
@@ -122,7 +123,7 @@ let joinChannel channelName dispatch = promise {
         match txt |> Decode.Auto.fromString with
         | Error e -> shouldntHappen e
         | Ok v -> v |> RemoteReceiveGraphics |> dispatch
-    WebSync.connect(clientUrl, channelName, ignore, onMsg) |> Connected |> dispatch
+    Connected(channelName, WebSync.connect(clientUrl, channelName, ignore, onMsg)) |> dispatch
     }
 
 let save model dispatch fileName =
@@ -171,16 +172,27 @@ let init (onload:NavCmd) =
         strokes = []
         loadedPictures = NotStarted
         pubsubConnection = None
+        channelName = None
         brushColor = colors |> chooseRandom
     } |> Nav.nav onload
 
 let view (model:Model) dispatch =
     class' "main" Html.div [
+        let greeting identity =
+            let channel =
+                match model.channelName with
+                | Some channelName -> $"channel '{channelName}'"
+                | None -> "the default channel"
+            Html.span[prop.className "greeting"; prop.text $"Hello, {identity}. You are drawing on {channel}. Whatever you draw can be seen by others on the same channel."]
         match model.currentUser with
         | NotStarted -> Html.div [prop.text "Initializing identity..."]
-        | InProgress -> Html.div [prop.text "Retreiving identity..."]
-        | Ready None -> Html.div [Html.text "Hello, stranger."; LoginButton dispatch]
-        | Ready (Some ((Facebook | AAD | Erroneous), accountName)) -> Html.div [Html.text $"Hello, {accountName}"; Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]]
+        | InProgress -> Html.div [prop.text "Retrieving identity..."]
+        | Ready None -> Html.div [LoginButton dispatch; greeting "stranger"]
+        | Ready (Some ((Facebook | AAD | Erroneous), accountName)) ->
+            Html.div [
+                Html.button [prop.text "Log out"; prop.onClick (thunk1 navigateTo @".auth/logout")]
+                greeting accountName
+                ]
         class' "sketching" Html.div [
             match model.loadedPictures with
             | InProgress -> Html.div "Loading pictures, please wait..."
@@ -226,13 +238,6 @@ let view (model:Model) dispatch =
                     ]
             ]
         SaveButton (save model dispatch)
-
-        Counter()
-        Html.div [
-            Html.span "Name override:"
-            Html.input [prop.placeholder "Enter your alias, Mr. Bond"; prop.valueOrDefault model.alias; prop.onChange (SetAlias >> dispatch)]
-            ]
-        Message model.alias
         ]
 
 open Elmish.React
