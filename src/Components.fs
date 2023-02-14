@@ -51,35 +51,31 @@ type LineData = { color: string; points: (float*float) list }
 let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement list) receiveStroke =
     let (windowHeight, windowWidth), _ = React.useState ((window.innerHeight - 250., window.innerWidth))
     let (currentLine: LineData option), setCurrentLine = React.useState None
-    let isDrawing = React.useRef false
     let reset _ : System.IDisposable option =
         setCurrentLine None
         None
-    React.useEffect(reset, [| box strokeColor; brushSize; existing|])
+    React.useEffect(reset, [| box strokeColor; brushSize; existing.Length |])
     let widthOf = function
         | "Small" -> 2
         | "Medium" -> 5
         | "Large" -> 12
         | "Huge" | _ -> 30
     let handleMouseDown (e:Event) =
-        isDrawing.current <- true
         let pos = e.target?getStage()?getPointerPosition()
         setCurrentLine(Some {color = strokeColor; points = [pos?x, pos?y]}) // start a new line with only one point
         e?evt?preventDefault()
     let handleMouseMove (e:Event) =
-        if isDrawing.current then
-            let stage = e.target?getStage()
-            let point = stage?getPointerPosition()
-            match currentLine with
-            | Some current ->
-                let x: float = point?x
-                let y: float = point?y
-                let current' = { current with points = (x,y)::current.points }
-                current' |> Some |> setCurrentLine
-            | None -> ()
+        let stage = e.target?getStage()
+        let point = stage?getPointerPosition()
+        match currentLine with
+        | Some current ->
+            let x: float = point?x
+            let y: float = point?y
+            let current' = { current with points = (x,y)::current.points }
+            current' |> Some |> setCurrentLine
+        | None -> ()
         e?evt?preventDefault()
     let handleMouseUp (e:Event) =
-        isDrawing.current <- false
         match currentLine with
         | Some line ->
             let points1 = line.points |> Array.ofList |> Array.rev
@@ -137,12 +133,12 @@ let SketchPad (strokeColor:string, brushSize: string) (existing: GraphicElement 
         onTouchMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onTouchEnd={handleMouseUp}
-        onTouchCancel={fun _ -> setCurrentLine None; isDrawing.current <- false}
+        onTouchCancel={ fun _ -> setCurrentLine None }
       >
         <Layer>
           <Text text="Just start drawing" x={5} y={30} />
           {existing |> List.mapi renderGraphicElement |> Array.ofList}
-          {[match currentLine with Some line when isDrawing.current -> makeLineFromCurrent line | _ -> ()]}
+          {[match currentLine with Some line -> makeLineFromCurrent line | _ -> ()]}
         </Layer>
       </Stage>
     </div>
