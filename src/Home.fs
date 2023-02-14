@@ -103,13 +103,15 @@ let update msg model =
         match model.pubsubConnection with None -> () | Some transmit -> Encode.Auto.toString(0, [stroke']) |> transmit
         { model with strokes = model.strokes@[stroke'] }, []
     | ReceiveText txt ->
-        // place the text near the start of a recent line
+        // place the text near the end of a recent line
         let coord =
             match model.strokes
+                    |> List.rev
                     |> List.tryPick (function
                         | Stroke(stroke,_,_) ->
-                            if stroke.points.Length >= 2 then
-                                { x = stroke.points[0]; y = stroke.points[1] } |> Some
+                            let points = stroke.points |> Array.rev
+                            if points.Length >= 2 then
+                                { x = points[1]; y = points[0] } |> Some
                             else None
                         | Text(_, point, _) -> createObj ["x", point.x; "y", (point.y + 50. |> box)] |> unbox |> Some) with
             | Some point -> point
